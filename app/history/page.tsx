@@ -14,32 +14,24 @@ import {
   Scale,
   AlertTriangle,
   CheckCircle2,
-  Eye
-<<<<<<< HEAD
-  , Menu, X
+  Eye,
+  Menu,
+  X
 } from 'lucide-react';
 import Image from 'next/image';
-=======
-} from 'lucide-react';
->>>>>>> a0e0a7c11251a12cf805781c702258b11b80c17e
 
 interface SidebarItemProps {
   href: string;
   icon: React.ElementType;
   label: string;
   active?: boolean;
+  onClick?: () => void;
 }
 
-<<<<<<< HEAD
-const SidebarItem = ({ href, icon: Icon, label, active = false, onClick }: SidebarItemProps & { onClick?: () => void }) => (
+const SidebarItem = ({ href, icon: Icon, label, active = false, onClick }: SidebarItemProps) => (
   <Link
     href={href}
     onClick={onClick}
-=======
-const SidebarItem = ({ href, icon: Icon, label, active = false }: SidebarItemProps) => (
-  <Link
-    href={href}
->>>>>>> a0e0a7c11251a12cf805781c702258b11b80c17e
     className={`flex items-center gap-3 rounded-2xl px-4 py-3.5 transition-all font-bold text-sm ${
       active 
         ? 'bg-blue-600 text-white shadow-md shadow-blue-200' 
@@ -69,10 +61,7 @@ export default function HistoryPage() {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [historyData, setHistoryData] = useState<HistoryItem[]>([]);
-<<<<<<< HEAD
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-=======
->>>>>>> a0e0a7c11251a12cf805781c702258b11b80c17e
 
   useEffect(() => {
     const defaultData: HistoryItem[] = [
@@ -83,9 +72,11 @@ export default function HistoryPage() {
 
     const stored = localStorage.getItem('medicalHistory');
     if (stored) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setHistoryData(JSON.parse(stored));
     } else {
       localStorage.setItem('medicalHistory', JSON.stringify(defaultData));
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setHistoryData(defaultData);
     }
   }, []);
@@ -103,7 +94,6 @@ export default function HistoryPage() {
     <div className="min-h-screen bg-[#F4F8FF] text-slate-900 font-sans selection:bg-blue-100">
       <div className="flex">
         
-<<<<<<< HEAD
         {/* MOBILE TOPBAR */}
         <div className="md:hidden fixed top-4 left-4 right-4 z-40 flex items-center justify-between p-3 bg-white rounded-xl shadow-md">
           <div className="flex items-center gap-3">
@@ -116,19 +106,13 @@ export default function HistoryPage() {
           </div>
         </div>
 
+        {/* SIDEBAR NAVIGATION (DESKTOP) */}
         <aside className="hidden md:fixed md:inset-y-0 md:left-0 md:w-64 md:flex md:flex-col bg-white border-r border-slate-100 p-6 md:justify-between z-30">
-          <div className="space-y-8">
-            <div className="flex items-center gap-3 px-2">
-              <Image src="/Logo%20Dialens%20AI.png" alt="DiaLens" height={40} width={40} className="h-10 w-auto rounded-md" />
-=======
-        {/* SIDEBAR NAVIGATION - FIXED LOGIC ACTIVE */}
-        <aside className="fixed inset-y-0 left-0 w-64 bg-white border-r border-slate-100 p-6 flex flex-col justify-between z-30">
           <div className="space-y-8">
             <div className="flex items-center gap-3 px-2">
               <div className="bg-blue-600 p-2 rounded-xl text-white shadow-md shadow-blue-100">
                 <Activity size={20} strokeWidth={3} />
               </div>
->>>>>>> a0e0a7c11251a12cf805781c702258b11b80c17e
               <div>
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none">Welcome</p>
                 <h2 className="text-lg font-black text-slate-900 tracking-tight mt-1">DiaLens</h2>
@@ -152,11 +136,7 @@ export default function HistoryPage() {
         </aside>
 
         {/* AREA PANEL KANAN */}
-<<<<<<< HEAD
-        <div className="md:pl-64 w-full">
-=======
-        <div className="pl-64 w-full">
->>>>>>> a0e0a7c11251a12cf805781c702258b11b80c17e
+        <div className="md:pl-64 pt-20 md:pt-0 w-full">
           <main className="p-8 max-w-7xl mx-auto space-y-6">
             
             <div className="rounded-[2.5rem] bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 p-8 shadow-xl shadow-blue-100 text-white relative overflow-hidden">
@@ -280,7 +260,6 @@ export default function HistoryPage() {
           </main>
         </div>
 
-<<<<<<< HEAD
         {/* MOBILE SIDEBAR DRAWER */}
         {mobileSidebarOpen && (
           <div className="fixed inset-0 z-50">
@@ -310,8 +289,6 @@ export default function HistoryPage() {
           </div>
         )}
 
-=======
->>>>>>> a0e0a7c11251a12cf805781c702258b11b80c17e
       </div>
     </div>
   );
