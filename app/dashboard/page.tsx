@@ -15,13 +15,17 @@ import {
   Clock,
   ArrowUpRight
 } from 'lucide-react';
+<<<<<<< HEAD
 import Image from 'next/image';
+=======
+>>>>>>> a0e0a7c11251a12cf805781c702258b11b80c17e
 
 interface SidebarItemProps {
   href: string;
   icon: React.ElementType;
   label: string;
   active?: boolean;
+<<<<<<< HEAD
   onClick?: () => void;
 }
 
@@ -29,6 +33,13 @@ const SidebarItem = ({ href, icon: Icon, label, active = false, onClick }: Sideb
   <Link
     href={href}
     onClick={onClick}
+=======
+}
+
+const SidebarItem = ({ href, icon: Icon, label, active = false }: SidebarItemProps) => (
+  <Link
+    href={href}
+>>>>>>> a0e0a7c11251a12cf805781c702258b11b80c17e
     className={`flex items-center gap-3 rounded-2xl px-4 py-3.5 transition-all font-bold text-sm ${
       active 
         ? 'bg-blue-600 text-white shadow-md shadow-blue-200' 
@@ -40,6 +51,7 @@ const SidebarItem = ({ href, icon: Icon, label, active = false, onClick }: Sideb
   </Link>
 );
 
+<<<<<<< HEAD
 interface MedicalLog {
   id: string;
   date: string;
@@ -53,6 +65,8 @@ interface MedicalLog {
   status: string;
 }
 
+=======
+>>>>>>> a0e0a7c11251a12cf805781c702258b11b80c17e
 interface StatCardProps {
   title: string;
   value: string;
@@ -84,6 +98,7 @@ export default function DashboardPage() {
   const pathname = usePathname();
   const router = useRouter();
   
+<<<<<<< HEAD
   // Initialize state dengan getter function
   const [displayName] = useState(() => {
     if (typeof window === 'undefined') return 'Pengguna DiaLens';
@@ -102,13 +117,36 @@ export default function DashboardPage() {
   useEffect(() => {
     // Default Mockup Data bawaan (disamakan dengan halaman History)
     const defaultData: MedicalLog[] = [
+=======
+  // State Dinamis
+  const [displayName, setDisplayName] = useState('Pengguna DiaLens');
+  const [totalScreening, setTotalScreening] = useState('0 Kali');
+  const [lastBmi, setLastBmi] = useState('- BMI');
+  const [lastRisk, setLastRisk] = useState('Belum Ada');
+  const [lastLog, setLastLog] = useState<any>(null);
+
+  useEffect(() => {
+    // 1. Ambil Nama Pengguna
+    const storedName = localStorage.getItem('userName');
+    if (storedName) {
+      setDisplayName(storedName);
+    }
+
+    // Default Mockup Data bawaan (disamakan dengan halaman History)
+    const defaultData = [
+>>>>>>> a0e0a7c11251a12cf805781c702258b11b80c17e
       { id: "DL-9082", date: "2026-05-18", age: "45-49 thn", weight: "78 kg", height: "168 cm", bmi: "27.6", highBP: "Yes", highChol: "Yes", prediction: "Risiko Tinggi (76%)", status: "Danger" },
       { id: "DL-8941", date: "2026-04-12", age: "25-29 thn", weight: "60 kg", height: "165 cm", bmi: "22.0", highBP: "No", highChol: "No", prediction: "Risiko Ringan (12%)", status: "Safe" },
       { id: "DL-8712", date: "2026-03-01", age: "60-64 thn", weight: "72 kg", height: "160 cm", bmi: "28.1", highBP: "Yes", highChol: "No", prediction: "Risiko Sedang (43%)", status: "Warning" }
     ];
 
+<<<<<<< HEAD
     // Ambil data Rekaman Medis dari localStorage
     let history: MedicalLog[] = [];
+=======
+    // 2. Ambil data Rekaman Medis dari localStorage
+    let history = [];
+>>>>>>> a0e0a7c11251a12cf805781c702258b11b80c17e
     const storedHistory = localStorage.getItem('medicalHistory');
     
     if (storedHistory) {
@@ -119,6 +157,7 @@ export default function DashboardPage() {
       history = defaultData;
     }
 
+<<<<<<< HEAD
     // Hitung dan petakan ke Bento Grid secara dinamis
     if (history.length > 0) {
       const latest = history[0]; 
@@ -131,6 +170,22 @@ export default function DashboardPage() {
         lastRisk: riskStatus,
         lastLog: latest
       });
+=======
+    // 3. Hitung dan petakan ke Bento Grid secara dinamis
+    if (history.length > 0) {
+      setTotalScreening(`${history.length} Kali`);
+      
+      // Mengambil baris paling atas/paling baru dari riwayat pemeriksaan
+      const latest = history[0]; 
+      setLastBmi(`${latest.bmi} BMI`);
+      
+      // Ambil teks label depannya saja (misal: "Risiko Ringan")
+      const riskStatus = latest.prediction.split(' (')[0];
+      setLastRisk(riskStatus);
+      
+      // Simpan log paling baru untuk ditampilkan di Activity Logs bawah
+      setLastLog(latest);
+>>>>>>> a0e0a7c11251a12cf805781c702258b11b80c17e
     }
   }, []);
 
@@ -143,6 +198,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-[#F4F8FF] text-slate-900 font-sans selection:bg-blue-100">
       <div className="flex">
+<<<<<<< HEAD
 
         {/* MOBILE TOPBAR */}
         <div className="md:hidden fixed top-4 left-4 right-4 z-40 flex items-center justify-between p-3 bg-white rounded-xl shadow-md">
@@ -164,6 +220,16 @@ export default function DashboardPage() {
           <div className="space-y-8">
             <div className="flex items-center gap-3 px-2">
               <Image src="/Logo%20Dialens%20AI.png" alt="DiaLens" height={40} width={40} className="h-10 w-auto rounded-md" />
+=======
+        
+        {/* SIDEBAR NAVIGATION */}
+        <aside className="fixed inset-y-0 left-0 w-64 bg-white border-r border-slate-100 p-6 flex flex-col justify-between z-30">
+          <div className="space-y-8">
+            <div className="flex items-center gap-3 px-2">
+              <div className="bg-blue-600 p-2 rounded-xl text-white shadow-md shadow-blue-100">
+                <Activity size={20} strokeWidth={3} />
+              </div>
+>>>>>>> a0e0a7c11251a12cf805781c702258b11b80c17e
               <div>
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none">Welcome</p>
                 <h2 className="text-lg font-black text-slate-900 tracking-tight mt-1">DiaLens</h2>
@@ -187,7 +253,11 @@ export default function DashboardPage() {
         </aside>
 
         {/* PANEL KONTEN UTAMA */}
+<<<<<<< HEAD
         <div className="md:pl-64 w-full">
+=======
+        <div className="pl-64 w-full">
+>>>>>>> a0e0a7c11251a12cf805781c702258b11b80c17e
           <main className="p-8 max-w-7xl mx-auto space-y-6">
             
             {/* HERO BANNER GRADASI */}
@@ -208,7 +278,11 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <StatCard 
                 title="Total Skrining" 
+<<<<<<< HEAD
                 value={screeningData.totalScreening} 
+=======
+                value={totalScreening} 
+>>>>>>> a0e0a7c11251a12cf805781c702258b11b80c17e
                 desc="Jumlah akumulasi seluruh pemeriksaan mandiri yang tersimpan di sistem riwayat Anda."
                 icon={TrendingUp}
                 iconBg="bg-amber-500"
@@ -216,7 +290,11 @@ export default function DashboardPage() {
               />
               <StatCard 
                 title="Indeks Massa Tubuh" 
+<<<<<<< HEAD
                 value={screeningData.lastBmi} 
+=======
+                value={lastBmi} 
+>>>>>>> a0e0a7c11251a12cf805781c702258b11b80c17e
                 desc="Kalkulasi terakhir menunjukkan berat badan Anda berdasarkan hasil entri indikator klinis terbaru."
                 icon={User}
                 iconBg="bg-sky-500"
@@ -224,10 +302,17 @@ export default function DashboardPage() {
               />
               <StatCard 
                 title="Status Risiko AI" 
+<<<<<<< HEAD
                 value={screeningData.lastRisk} 
                 desc="Berdasarkan pengujian data terbaru, algoritma sistem menyimpulkan kategori status risiko tubuh Anda saat ini."
                 icon={Zap}
                 iconBg={screeningData.lastRisk === 'Risiko Tinggi' ? 'bg-rose-500' : screeningData.lastRisk === 'Risiko Sedang' ? 'bg-amber-500' : 'bg-emerald-500'}
+=======
+                value={lastRisk} 
+                desc="Berdasarkan pengujian data terbaru, algoritma sistem menyimpulkan kategori status risiko tubuh Anda saat ini."
+                icon={Zap}
+                iconBg={lastRisk === 'Risiko Tinggi' ? 'bg-rose-500' : lastRisk === 'Risiko Sedang' ? 'bg-amber-500' : 'bg-emerald-500'}
+>>>>>>> a0e0a7c11251a12cf805781c702258b11b80c17e
                 gradientBg="from-purple-50/60 to-white"
               />
             </div>
@@ -240,18 +325,31 @@ export default function DashboardPage() {
                   <h3 className="text-lg font-black text-slate-900 tracking-tight">Timeline Aktivitas Terbaru</h3>
                 </div>
                 <div className="space-y-4">
+<<<<<<< HEAD
                   {screeningData.lastLog ? (
+=======
+                  {lastLog ? (
+>>>>>>> a0e0a7c11251a12cf805781c702258b11b80c17e
                     <div className="flex items-start gap-4 p-4 rounded-2xl bg-slate-50/50 border border-slate-100">
                       <div className="p-2 bg-blue-50 text-blue-600 rounded-xl mt-0.5">
                         <Clock size={16} />
                       </div>
                       <div>
+<<<<<<< HEAD
                         <p className="text-xs font-bold text-slate-800">Melakukan Cek Kesehatan Mandiri ({screeningData.lastLog.id})</p>
                         <p className="text-[10px] text-slate-400 font-medium mt-0.5">
                           Sistem berhasil memprediksi parameter fisik dengan kesimpulan &quot;{screeningData.lastLog.prediction}&quot;.
                         </p>
                         <span className="inline-block text-[9px] font-black text-blue-600 bg-blue-50/80 px-2 py-0.5 rounded mt-2">
                           {screeningData.lastLog.date}
+=======
+                        <p className="text-xs font-bold text-slate-800">Melakukan Cek Kesehatan Mandiri ({lastLog.id})</p>
+                        <p className="text-[10px] text-slate-400 font-medium mt-0.5">
+                          Sistem berhasil memprediksi parameter fisik dengan kesimpulan "{lastLog.prediction}".
+                        </p>
+                        <span className="inline-block text-[9px] font-black text-blue-600 bg-blue-50/80 px-2 py-0.5 rounded mt-2">
+                          {lastLog.date}
+>>>>>>> a0e0a7c11251a12cf805781c702258b11b80c17e
                         </span>
                       </div>
                     </div>
@@ -278,6 +376,7 @@ export default function DashboardPage() {
           </main>
         </div>
 
+<<<<<<< HEAD
         {/* MOBILE SIDEBAR DRAWER */}
         {mobileSidebarOpen && (
           <div className="fixed inset-0 z-50">
@@ -314,6 +413,8 @@ export default function DashboardPage() {
             </div>
           </div>
         )}
+=======
+>>>>>>> a0e0a7c11251a12cf805781c702258b11b80c17e
       </div>
     </div>
   );
