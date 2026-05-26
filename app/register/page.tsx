@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image'; // Penting: Import Image dari Next.js
+import Image from 'next/image';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -23,7 +23,6 @@ export default function RegisterPage() {
     e.preventDefault();
     setError('');
     
-    // Validasi form kosong
     if (!form.name || !form.email || !form.password) {
       setError('Semua kolom wajib diisi!');
       return;
@@ -31,24 +30,44 @@ export default function RegisterPage() {
 
     setLoading(true);
 
-    // Simulasi proses loading / API Call
-    setTimeout(() => {
-      setLoading(false);
-      // Simpan nama user ke local storage agar terbaca di Dashboard
-      localStorage.setItem('userName', form.name);
+    try {
+      // Mengirimkan data pendaftaran ke URL API backend Vercel kamu
+      const response = await fetch('https://dia-lens-backend.vercel.app/api/health/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: form.name,
+          email: form.email,
+          password: form.password
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        // Menangkap error "Email sudah terdaftar" atau error validasi lainnya dari backend
+        throw new Error(data.message || 'Gagal mendaftar. Silakan coba lagi.');
+      }
+
+      // JIKA BERHASIL: Simpan informasi user sementara jika diperlukan
+      localStorage.setItem('userName', data.user.name);
       
-      // Arahkan ke halaman login setelah berhasil mendaftar
+      // Arahkan ke halaman login setelah berhasil mendaftar ke database online
       router.push('/login');
-    }, 1000);
+    } catch (err: any) {
+      setError(err.message || 'Terjadi kesalahan jaringan.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-[#F4F8FF] text-slate-900 font-sans flex flex-col justify-center items-center selection:bg-blue-100 p-4">
       
-      {/* KARTU REGISTER UTAMA */}
       <main className="w-full max-w-[440px] bg-white rounded-[2.5rem] border border-slate-200/50 p-10 shadow-xl shadow-blue-100/50 flex flex-col items-center z-10">
         
-        {/* Gambar Logo DiaLens */}
         <div className="w-16 h-16 mb-2">
           <Image
             src="/Logo%20Dialens%20AI.png"
@@ -66,7 +85,6 @@ export default function RegisterPage() {
           Buat akun baru untuk menyimpan riwayat kesehatan dan melihat hasil skrining AI.
         </p>
 
-        {/* Form Area */}
         <form onSubmit={handleSubmit} className="w-full mt-6 space-y-4">
           {error && (
               <div className="text-[11px] font-bold text-rose-600 bg-rose-50 px-3 py-2 rounded-xl border border-rose-100 text-center">
@@ -74,7 +92,6 @@ export default function RegisterPage() {
               </div>
           )}
 
-          {/* Input Name */}
           <div className="space-y-1.5">
             <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block px-0.5">
               Full Name
@@ -89,7 +106,6 @@ export default function RegisterPage() {
             />
           </div>
 
-          {/* Input Email */}
           <div className="space-y-1.5">
             <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block px-0.5">
               Email Address
@@ -104,7 +120,6 @@ export default function RegisterPage() {
             />
           </div>
 
-          {/* Input Password */}
           <div className="space-y-1.5">
             <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block px-0.5">
               Password
@@ -119,7 +134,6 @@ export default function RegisterPage() {
             />
           </div>
 
-          {/* Tombol Submit */}
           <button
             type="submit"
             disabled={loading}
@@ -129,7 +143,6 @@ export default function RegisterPage() {
           </button>
         </form>
 
-        {/* Footer Link */}
         <p className="text-[11px] font-bold text-slate-400 mt-6 text-center">
           Sudah punya akun?{' '}
           <Link href="/login" className="text-[#00AEEF] hover:underline font-black">
