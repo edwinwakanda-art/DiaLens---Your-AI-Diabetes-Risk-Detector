@@ -26,7 +26,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = (e: FormEvent<HTMLFormElement>) => {
+  const handleLogin = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!email || !password) {
@@ -37,10 +37,36 @@ export default function LoginPage() {
     setLoading(true);
     setError('');
 
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      // Integrasi langsung dengan URL API backend Vercel kamu
+      const response = await fetch('https://dia-lens-backend.vercel.app/api/health/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        // Menangkap error "Email atau Password salah" dari authController backend kamu
+        throw new Error(data.message || 'Gagal masuk. Silakan periksa kredensial Anda.');
+      }
+
+      // LOGIN BERHASIL: Simpan token autentikasi ke localStorage
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('refreshToken', data.refreshToken);
+      localStorage.setItem('user', JSON.stringify(data.user));
+
+      // Alihkan pengguna ke halaman dashboard
       router.push('/dashboard');
-    }, 900);
+    } catch (err: any) {
+      // Menampilkan pesan error asli dari backend ke state error agar tampil di UI
+      setError(err.message || 'Terjadi kesalahan jaringan atau server mati.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleBack = () => {
@@ -115,7 +141,7 @@ export default function LoginPage() {
             </div>
 
             {error && (
-              <div className="bg-red-50 text-red-600 text-xs p-3 rounded-lg border border-red-100">
+              <div className="bg-red-50 text-red-600 text-xs p-3 rounded-lg border border-red-100 animate-pulse">
                 {error}
               </div>
             )}
@@ -214,7 +240,7 @@ export default function LoginPage() {
             <div className="grid grid-cols-2 gap-4">
               <button
                 type="button"
-                onClick={() => router.push('/dashboard')}
+                onClick={() => setError('Autentikasi pihak ketiga Google belum dikonfigurasi di backend.')}
                 className="border border-sky-200 rounded-xl py-2.5 flex items-center justify-center gap-2 text-xs font-semibold text-slate-700 hover:bg-sky-100 transition-all"
               >
                 <span className="w-6 h-6 bg-sky-100 rounded-full flex items-center justify-center font-bold text-[10px] text-sky-700">G</span>
@@ -222,7 +248,7 @@ export default function LoginPage() {
               </button>
               <button
                 type="button"
-                onClick={() => router.push('/dashboard')}
+                onClick={() => setError('Autentikasi pihak ketiga Apple belum dikonfigurasi di backend.')}
                 className="border border-sky-200 rounded-xl py-2.5 flex items-center justify-center gap-2 text-xs font-semibold text-slate-700 hover:bg-sky-100 transition-all"
               >
                 <span className="w-6 h-6 bg-sky-900 rounded-full flex items-center justify-center font-bold text-[8px] text-white">A</span>
