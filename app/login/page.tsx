@@ -51,7 +51,7 @@ export default function LoginPage() {
 
       if (!response.ok) {
         // Menangkap error "Email atau Password salah" dari authController backend kamu
-        throw new Error(data.message || 'Gagal masuk. Silakan periksa kredensial Anda.');
+        throw new Error(data.message || 'Akun anda belum terdaftar. Silakan register terlebih dahulu.');
       }
 
       // LOGIN BERHASIL: Simpan token autentikasi ke localStorage
