@@ -26,7 +26,7 @@ export default function LoginPage() {
     setError('');
 
     try {
-      // Mengirim data login ke endpoint login backend Vercel kamu
+      // Mengirimkan data login ke URL API backend Vercel kamu
       const response = await fetch('https://dia-lens-backend.vercel.app/api/health/login', {
         method: 'POST',
         headers: {
@@ -38,7 +38,6 @@ export default function LoginPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        // Menangkap error "Email atau Password salah" dari backend
         throw new Error(data.message || 'Gagal masuk. Periksa kembali akun Anda.');
       }
 

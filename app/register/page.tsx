@@ -31,7 +31,7 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      // Mengirim data ke endpoint register backend Vercel kamu
+      // Mengirimkan data pendaftaran ke URL API backend Vercel kamu
       const response = await fetch('https://dia-lens-backend.vercel.app/api/health/register', {
         method: 'POST',
         headers: {
@@ -50,10 +50,10 @@ export default function RegisterPage() {
         throw new Error(data.message || 'Gagal mendaftar. Silakan coba lagi.');
       }
 
-      // Menyimpan nama user ke localStorage agar bisa ditampilkan di Dashboard
+      // Simpan informasi user sementara
       localStorage.setItem('userName', data.user.name);
       
-      // Redirect ke halaman login setelah sukses mendaftar
+      // Arahkan ke halaman login setelah berhasil mendaftar
       router.push('/login');
     } catch (err: any) {
       setError(err.message || 'Terjadi kesalahan jaringan.');
@@ -135,7 +135,7 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-[#00AEEF] hover:bg-[#009cd6] text-white font-black py-3.5 rounded-xl shadow-lg shadow-blue-100 transition-all text-xs uppercase tracking-wider mt-2 disabled:opacity-70"
+            className="w-full bg-[#00AEEF] hover:bg-[#009cd6] text-white font-black py-3.5 rounded-xl shadow-lg shadow-blue-100 transition-all text-xs uppercase tracking-wider mt-2 disabled:opacity-70 disabled:cursor-not-allowed"
           >
             {loading ? 'Membuat Akun...' : 'Daftar Sekarang'}
           </button>
@@ -147,7 +147,6 @@ export default function RegisterPage() {
             Masuk di sini
           </Link>
         </p>
-
       </main>
     </div>
   );
