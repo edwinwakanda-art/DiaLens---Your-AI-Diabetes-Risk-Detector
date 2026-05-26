@@ -12,7 +12,8 @@ import {
   Cigarette,
   Wine,
   CheckCircle2,
-  Info
+  Info,
+  Sparkles
 } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 
@@ -63,7 +64,7 @@ export default function CheckKesehatanPage() {
   });
 
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<{ prediction: string; computedBmi: string } | null>(null);
+  const [result, setResult] = useState<{ prediction: string; computedBmi: string; aiRecommendation: string } | null>(null);
 
   // Kalkulasi Skor BMI Real-time
   const currentBmi = useMemo(() => {
@@ -92,18 +93,24 @@ export default function CheckKesehatanPage() {
     const bmiValue = parseFloat(currentBmi);
     let predictionText = "Risiko Ringan (12%)";
     let statusText = "Safe";
+    let textRecommendation = "";
 
+    // Logika rekomendasi dengan format asterisk tunggal (*) penyesuaian BE Railway
     if (form.HighBP === "1" || bmiValue >= 27) {
       predictionText = "Risiko Tinggi (76%)";
       statusText = "Danger";
+      textRecommendation = `*Interpretasi hasil* \nHasil analisis mendeteksi tingkat risiko diabetes berada pada kategori *Risiko Tinggi*. Berdasarkan indikasi kombinasi tekanan darah dan indeks massa tubuh (BMI) Anda, diperlukan perhatian medis intensif.\n\n*3 langkah konkret untuk minggu ini* \n1. *Batasi Karbohidrat Sederhana* – Kurangi drastis porsi nasi putih, roti putih, mi, serta hilangkan konsumsi camilan dan minuman manis olahan. \n2. *Kardio Rutin Terukur* – Lakukan aktivitas fisik berupa jalan cepat atau bersepeda santai minimal 30 menit setiap hari untuk meningkatkan sensitivitas insulin. \n3. *Jadwalkan Cek Medis* – Segera buat janji temu dengan dokter untuk melakukan skrining klinis gula darah puasa (GDP) atau HbA1c di laboratorium.\n\n*Catatan:* Hasil skrining ini berbasis komputasi cerdas DiaLens. Selalu konsultasikan kondisi riil fisik Anda kepada dokter spesialis.`;
     } else if (form.HighChol === "1" || bmiValue >= 24) {
       predictionText = "Risiko Sedang (43%)";
       statusText = "Warning";
+      textRecommendation = `*Interpretasi hasil* \nHasil analisis mendeteksi tingkat risiko diabetes berada pada kondisi *Risiko Sedang*. Kondisi tubuh Anda memerlukan beberapa modifikasi kebiasaan sebelum berkembang ke level yang membahayakan.\n\n*3 langkah konkret untuk minggu ini* \n1. *Tingkatkan Serat Harian* – Tambahkan minimal satu porsi sayur berdaun hijau (seperti bayam atau brokoli) dan buah rendah gula di setiap jam makan utama Anda. \n2. *Kurangi Camilan Malam* – Hindari makan berat atau mengonsumsi makanan ringan yang tinggi kalori dan lemak jenuh menjelang waktu tidur malam. \n3. *Kelola Waktu Istirahat* – Pastikan tubuh mendapatkan waktu tidur berkualitas selama 7-8 jam semalam untuk menjaga stabilitas hormon metabolisme harian.\n\n*Catatan:* Hasil skrining ini berbasis komputasi cerdas DiaLens. Jaga tren tubuh Anda agar tetap seimbang secara konsisten.`;
+    } else {
+      predictionText = "Risiko Ringan (12%)";
+      statusText = "Safe";
+      textRecommendation = `*Interpretasi hasil* \nHasil skrining Anda menunjukkan parameter yang relatif aman dengan kategori *Risiko Ringan*. Kondisi tubuh dan kebiasaan harian Anda sudah berada di jalur yang baik.\n\n*3 langkah konkret untuk minggu ini* \n1. *Pertahankan Hidrasi Tubuh* – Konsisten minum air putih minimal 2 hingga 2,5 liter per hari untuk menjaga kelancaran sistem ekskresi metabolisme tubuh. \n2. *Aktif Bergerak Setelah Makan* – Biasakan melakukan aktivitas berjalan kaki santai selama 10-15 menit setiap selesai mengonsumsi makanan berat. \n3. *Skrining Mandiri Berkala* – Lakukan pemantauan kesehatan mandiri secara rutin di DiaLens guna mengunci data tren stabilitas fisik Anda dalam jangka panjang.\n\n*Catatan:* Informasi ini merupakan hasil skrining AI DiaLens. Tetap pertahankan gaya hidup sehat ini untuk masa depan cerah Anda!`;
     }
 
-    // Simulasi jeda loading AI
     setTimeout(() => {
-      // 1. Siapkan data log baru
       const newHistoryItem = {
         id: `DL-${Math.floor(1000 + Math.random() * 9000)}`,
         date: new Date().toISOString().split('T')[0],
@@ -114,29 +121,33 @@ export default function CheckKesehatanPage() {
         highBP: form.HighBP === "1" ? "Yes" : "No",
         highChol: form.HighChol === "1" ? "Yes" : "No",
         prediction: predictionText,
-        status: statusText
+        status: statusText,
+        ai_recommendation: textRecommendation
       };
 
-      // 2. Ambil history lama dari local storage
       const existingHistoryRaw = localStorage.getItem('medicalHistory');
       let currentHistory = [];
       if (existingHistoryRaw) {
         currentHistory = JSON.parse(existingHistoryRaw);
       }
 
-      // 3. Gabungkan dan simpan kembali
       const updatedHistory = [newHistoryItem, ...currentHistory];
       localStorage.setItem('medicalHistory', JSON.stringify(updatedHistory));
 
-      // 4. Update UI hasil
       setResult({
         prediction: predictionText,
-        computedBmi: currentBmi
+        computedBmi: currentBmi,
+        aiRecommendation: textRecommendation
       });
       setLoading(false);
-      
-      alert("Analisis AI Berhasil! Data telah disimpan.");
     }, 1200);
+  };
+
+  const formatRecommendationText = (text: string) => {
+    if (!text) return '';
+    return text.split('*').map((part, i) => 
+      i % 2 === 1 ? <strong key={i} className="font-extrabold text-slate-900 bg-blue-50/60 px-1 rounded">{part}</strong> : part
+    );
   };
 
   const inputStyle = "w-full rounded-xl border border-slate-200 bg-white/90 px-3 py-2.5 text-xs font-bold text-slate-800 outline-none focus:border-blue-500 focus:bg-white shadow-inner text-black cursor-pointer";
@@ -145,13 +156,12 @@ export default function CheckKesehatanPage() {
     <div className="min-h-screen bg-[#F4F8FF] text-slate-900 font-sans selection:bg-blue-100">
       <div className="flex">
         
-        {/* Panggil komponen Sidebar terpusat */}
         <Sidebar />
 
-        {/* UTAMA PANEL AREA */}
         <div className="md:pl-64 pt-20 md:pt-0 w-full">
           <main className="p-8 max-w-7xl mx-auto space-y-6">
             
+            {/* Header Area */}
             <div className="rounded-[2.5rem] bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 p-8 shadow-xl shadow-blue-100 text-white relative overflow-hidden">
               <div className="absolute right-0 top-0 translate-x-10 -translate-y-10 w-72 h-72 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between relative z-10">
@@ -160,173 +170,188 @@ export default function CheckKesehatanPage() {
                   <h1 className="mt-1 text-3xl font-black tracking-tight text-white">Kalkulator Prediksi Risiko Diabetes</h1>
                 </div>
                 <div className="text-blue-100 text-xs sm:text-sm max-w-xl leading-relaxed font-medium">
-                  Isi parameter tubuh Anda di bawah ini. Grid kartu interaktif kami dirancang berwarna agar proses skrining Anda menjadi lebih mudah dipahami dan menyenangkan.
+                  Isi parameter tubuh Anda di bawah ini secara lengkap. Hasil kalkulasi dan rekomendasi tindakan medis khusus akan ditampilkan penuh di bagian bawah setelah Anda menekan tombol analisis.
                 </div>
               </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+            {/* FORM FORM UTAMA */}
+            <form onSubmit={handleSubmit} className="space-y-6">
               
-              {/* SISI KIRI: INPUT FORM (BENTO GRID) */}
-              <div className="lg:col-span-2 space-y-6">
+              {/* LAYOUT FORM FULL 3 KOLOM BENTO GRID */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 
-                {/* BAGIAN 1: BIOMETRIK FISIK */}
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
-                  <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 mb-8 flex items-center gap-3">
-                    <div className="w-1.5 h-4 bg-blue-600 rounded-full"></div>
-                    Step 1: Patient Biometrics
-                  </h2>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <FormCard label="Kategori Umur" alias="_AGEG5YR" icon={Calendar} iconBg="bg-amber-500" gradientBg="from-amber-50/60 to-white">
-                      <select value={form.Age} onChange={e => handleChange('Age', e.target.value)} className={inputStyle}>
-                        <option value="1">1 = 18 - 24 tahun</option>
-                        <option value="2">2 = 25 - 29 tahun</option>
-                        <option value="3">3 = 30 - 34 tahun</option>
-                        <option value="4">4 = 35 - 39 tahun</option>
-                        <option value="5">5 = 40 - 44 tahun</option>
-                        <option value="6">6 = 45 - 49 tahun</option>
-                        <option value="7">7 = 50 - 54 tahun</option>
-                        <option value="8">8 = 55 - 59 tahun</option>
-                        <option value="9">9 = 60 - 64 tahun</option>
-                        <option value="10">10 = 65 - 69 tahun</option>
-                        <option value="11">11 = 70 - 74 tahun</option>
-                        <option value="12">12 = 75 - 79 tahun</option>
-                        <option value="13">13 = 80 tahun atau lebih</option>
-                      </select>
-                    </FormCard>
+                {/* KELOMPOK 1: BIOMETRIK FISIK */}
+                <FormCard label="Kategori Umur" alias="_AGEG5YR" icon={Calendar} iconBg="bg-amber-500" gradientBg="from-amber-50/60 to-white">
+                  <select value={form.Age} onChange={e => handleChange('Age', e.target.value)} className={inputStyle}>
+                    <option value="1">1 = 18 - 24 tahun</option>
+                    <option value="2">2 = 25 - 29 tahun</option>
+                    <option value="3">3 = 30 - 34 tahun</option>
+                    <option value="4">4 = 35 - 39 tahun</option>
+                    <option value="5">5 = 40 - 44 tahun</option>
+                    <option value="6">6 = 45 - 49 tahun</option>
+                    <option value="7">7 = 50 - 54 tahun</option>
+                    <option value="8">8 = 55 - 59 tahun</option>
+                    <option value="9">9 = 60 - 64 tahun</option>
+                    <option value="10">10 = 65 - 69 tahun</option>
+                    <option value="11">11 = 70 - 74 tahun</option>
+                    <option value="12">12 = 75 - 79 tahun</option>
+                    <option value="13">13 = 80 tahun atau lebih</option>
+                  </select>
+                </FormCard>
 
-                    <FormCard label="Berat Badan (kg)" alias="Weight" icon={Scale} iconBg="bg-sky-500" gradientBg="from-sky-50/60 to-white">
-                      <input type="number" value={form.Weight} onChange={e => handleChange('Weight', e.target.value)} placeholder="Contoh: 60" className={inputStyle} required />
-                    </FormCard>
+                <FormCard label="Berat Badan (kg)" alias="Weight" icon={Scale} iconBg="bg-sky-500" gradientBg="from-sky-50/60 to-white">
+                  <input type="number" value={form.Weight} onChange={e => handleChange('Weight', e.target.value)} placeholder="Contoh: 60" className={inputStyle} required />
+                </FormCard>
 
-                    <FormCard label="Tinggi Badan (cm)" alias="Height" icon={Activity} iconBg="bg-blue-600" gradientBg="from-blue-50/60 to-white">
-                      <input type="number" value={form.Height} onChange={e => handleChange('Height', e.target.value)} placeholder="Contoh: 165" className={inputStyle} required />
-                    </FormCard>
-                    
-                    
-                  </div>
-                </div>
+                <FormCard label="Tinggi Badan (cm)" alias="Height" icon={Activity} iconBg="bg-blue-600" gradientBg="from-blue-50/60 to-white">
+                  <input type="number" value={form.Height} onChange={e => handleChange('Height', e.target.value)} placeholder="Contoh: 165" className={inputStyle} required />
+                </FormCard>
 
-                {/* BAGIAN 2: DATA DIAGNOSTIK & GAYA HIDUP */}
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
-                  <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 mb-8 flex items-center gap-3">
-                    <div className="w-1.5 h-4 bg-blue-600 rounded-full"></div>
-                    Step 2: Diagnostic & Lifestyle Data
-                  </h2>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <FormCard label="Tekanan Darah Tinggi" alias="HighBP" icon={HeartPulse} iconBg="bg-rose-500" gradientBg="from-rose-50/60 to-white">
-                      <select value={form.HighBP} onChange={e => handleChange('HighBP', e.target.value)} className={inputStyle}>
-                        <option value="0">No</option>
-                        <option value="1">Yes</option>
-                      </select>
-                    </FormCard>
+                {/* KELOMPOK 2: DIAGNOSTIK & GAYA HIDUP */}
+                <FormCard label="Tekanan Darah Tinggi" alias="HighBP" icon={HeartPulse} iconBg="bg-rose-500" gradientBg="from-rose-50/60 to-white">
+                  <select value={form.HighBP} onChange={e => handleChange('HighBP', e.target.value)} className={inputStyle}>
+                    <option value="0">No</option>
+                    <option value="1">Yes</option>
+                  </select>
+                </FormCard>
 
-                    <FormCard label="Kolesterol Tinggi" alias="HighChol" icon={Droplets} iconBg="bg-orange-500" gradientBg="from-orange-50/60 to-white">
-                      <select value={form.HighChol} onChange={e => handleChange('HighChol', e.target.value)} className={inputStyle}>
-                        <option value="0">No</option>
-                        <option value="1">Yes</option>
-                      </select>
-                    </FormCard>
+                <FormCard label="Kolesterol Tinggi" alias="HighChol" icon={Droplets} iconBg="bg-orange-500" gradientBg="from-orange-50/60 to-white">
+                  <select value={form.HighChol} onChange={e => handleChange('HighChol', e.target.value)} className={inputStyle}>
+                    <option value="0">No</option>
+                    <option value="1">Yes</option>
+                  </select>
+                </FormCard>
 
-                    <FormCard label="Pemeriksaan Kolesterol (5 Thn)" alias="CholCheck" icon={Eye} iconBg="bg-emerald-500" gradientBg="from-emerald-50/60 to-white">
-                      <select value={form.CholCheck} onChange={e => handleChange('CholCheck', e.target.value)} className={inputStyle}>
-                        <option value="1">Yes</option>
-                        <option value="0">No</option>
-                      </select>
-                    </FormCard>
+                <FormCard label="Pemeriksaan Kolesterol (5 Thn)" alias="CholCheck" icon={Eye} iconBg="bg-emerald-500" gradientBg="from-emerald-50/60 to-white">
+                  <select value={form.CholCheck} onChange={e => handleChange('CholCheck', e.target.value)} className={inputStyle}>
+                    <option value="1">Yes</option>
+                    <option value="0">No</option>
+                  </select>
+                </FormCard>
 
-                    <FormCard label="Aktif Berolahraga" alias="PhysActivity" icon={Dumbbell} iconBg="bg-purple-500" gradientBg="from-purple-50/60 to-white">
-                      <select value={form.PhysActivity} onChange={e => handleChange('PhysActivity', e.target.value)} className={inputStyle}>
-                        <option value="1">Yes</option>
-                        <option value="0">No</option>
-                      </select>
-                    </FormCard>
+                <FormCard label="Aktif Berolahraga" alias="PhysActivity" icon={Dumbbell} iconBg="bg-purple-500" gradientBg="from-purple-50/60 to-white">
+                  <select value={form.PhysActivity} onChange={e => handleChange('PhysActivity', e.target.value)} className={inputStyle}>
+                    <option value="1">Yes</option>
+                    <option value="0">No</option>
+                  </select>
+                </FormCard>
 
-                    <FormCard label="Status Perokok" alias="Smoker" icon={Cigarette} iconBg="bg-indigo-500" gradientBg="from-indigo-50/60 to-white">
-                      <select value={form.Smoker} onChange={e => handleChange('Smoker', e.target.value)} className={inputStyle}>
-                        <option value="0">No</option>
-                        <option value="1">Yes</option>
-                      </select>
-                    </FormCard>
+                <FormCard label="Status Perokok" alias="Smoker" icon={Cigarette} iconBg="bg-indigo-500" gradientBg="from-indigo-50/60 to-white">
+                  <select value={form.Smoker} onChange={e => handleChange('Smoker', e.target.value)} className={inputStyle}>
+                    <option value="0">No</option>
+                    <option value="1">Yes</option>
+                  </select>
+                </FormCard>
 
-                    <FormCard label="Konsumsi Alkohol Berat" alias="HvyAlcoholConsump" icon={Wine} iconBg="bg-cyan-500" gradientBg="from-cyan-50/60 to-white">
-                      <select value={form.HvyAlcoholConsump} onChange={e => handleChange('HvyAlcoholConsump', e.target.value)} className={inputStyle}>
-                        <option value="0">No</option>
-                        <option value="1">Yes</option>
-                      </select>
-                    </FormCard>
-                  </div>
-                </div>
-<div className="sm:col-span-2 mt-2">
-                      <div className="rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 p-4 border border-blue-100 flex items-center justify-between shadow-sm">
-                        <div className="flex items-center gap-3">
-                          <div className="bg-blue-600 text-white p-2 rounded-xl text-xs font-black">BMI</div>
-                          <span className="text-xs font-bold text-slate-700">Hasil Konversi Otomatis Indeks Massa Tubuh Anda:</span>
-                        </div>
-                        <span className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-1.5 rounded-xl font-black text-sm shadow-md">{currentBmi}</span>
-                      </div>
-                    </div>
-                     <div className="bg-blue-600 rounded-2xl p-6 text-white shadow-xl shadow-blue-200 border border-blue-500">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="bg-white/20 p-2 rounded-lg"><Info size={20} /></div>
-                    <h3 className="font-bold text-sm uppercase tracking-wide">AI Guidelines</h3>
-                  </div>
-                  <p className="text-xs text-blue-100 leading-relaxed mb-6">
-                    Gunakan data medis terbaru. Pastikan parameter tubuh seperti berat dan tinggi badan diisi dengan benar karena akan digunakan sebagai perhitungan indeks utama.
-                  </p>
-                  <button 
-                    type="submit" 
-                    disabled={loading} 
-                    className="w-full bg-white text-blue-600 hover:bg-blue-50 font-black py-4 rounded-2xl shadow-xl transition-all flex items-center justify-center gap-2 text-sm uppercase tracking-wider active:scale-[0.98]"
-                  >
-                    {loading ? 'Menganalisis...' : 'Mulai Analisis AI'}
-                  </button>
-                </div>
+                <FormCard label="Konsumsi Alkohol Berat" alias="HvyAlcoholConsump" icon={Wine} iconBg="bg-cyan-500" gradientBg="from-cyan-50/60 to-white">
+                  <select value={form.HvyAlcoholConsump} onChange={e => handleChange('HvyAlcoholConsump', e.target.value)} className={inputStyle}>
+                    <option value="0">No</option>
+                    <option value="1">Yes</option>
+                  </select>
+                </FormCard>
               </div>
 
-              {/* SISI KANAN: PANEL OUTPUT & SUBMIT */}
-              <div className="space-y-6 lg:col-span-1 sticky top-6">
-                
-                {/* Kotak Petunjuk & Tombol Submit */}
-               
+              {/* LIVE BAR BMI INFO */}
+              <div className="rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 p-4 border border-blue-100 flex items-center justify-between shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="bg-blue-600 text-white p-2 rounded-xl text-xs font-black">BMI</div>
+                  <span className="text-xs font-bold text-slate-700">Hasil Konversi Otomatis Indeks Massa Tubuh Anda:</span>
+                </div>
+                <span className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-1.5 rounded-xl font-black text-sm shadow-md">{currentBmi}</span>
+              </div>
 
-                {/* Panel Hasil Diagnosis */}
-                <div className="rounded-[2.5rem] bg-white border border-slate-200/60 p-6 shadow-sm">
-                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Analysis Output</p>
-                  <h3 className="mt-1 text-xl font-black text-slate-900 tracking-tight">Hasil Deteksi AI</h3>
+              {/* PERUBAHAN UTAMA: TOMBOL MULAI ANALISIS SEKARANG DI BAWAH (FULL WIDTH & ELEGAN) */}
+              <div className="pt-2">
+                <button 
+                  type="submit" 
+                  disabled={loading} 
+                  className="w-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white hover:opacity-95 font-black py-4 rounded-2xl shadow-lg shadow-indigo-100 transition-all flex items-center justify-center gap-3 text-xs md:text-sm uppercase tracking-widest active:scale-[0.99]"
+                >
+                  {loading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Sedang Memproses Data Medis...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={16} />
+                      <span>Mulai Analisis AI Sekarang</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+
+            {/* PANEL OUTPUT HASIL DAN REKOMENDASI DI PALING BAWAH (LUAS DAN JELAS) */}
+            <div className="pt-4">
+              {result ? (
+                <div className="grid grid-cols-1 gap-6">
                   
-                  {result ? (
-                    <div className={`mt-4 p-5 rounded-3xl flex items-start gap-3 shadow-inner border ${
+                  {/* Kotak Hasil Diagnostik Utama */}
+                  <div className="rounded-[2.5rem] bg-white border border-slate-200/60 p-6 md:p-8 shadow-sm">
+                    <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Analysis Output</p>
+                    <h3 className="mt-1 text-xl font-black text-slate-900 tracking-tight">Hasil Deteksi AI DiaLens</h3>
+                    
+                    <div className={`mt-5 p-6 rounded-3xl flex items-start gap-4 shadow-inner border ${
                       result.prediction.includes('Tinggi') 
                         ? 'bg-rose-50 border-rose-100 text-rose-800' 
                         : result.prediction.includes('Sedang') 
                           ? 'bg-amber-50 border-amber-100 text-amber-800'
                           : 'bg-emerald-50 border-emerald-100 text-emerald-800'
                     }`}>
-                      <CheckCircle2 size={22} className={`shrink-0 mt-0.5 ${
+                      <CheckCircle2 size={26} className={`shrink-0 mt-0.5 ${
                         result.prediction.includes('Tinggi') ? 'text-rose-500' : result.prediction.includes('Sedang') ? 'text-amber-500' : 'text-emerald-500'
                       }`} />
                       <div>
-                        <p className={`text-[10px] font-black uppercase tracking-wider ${
+                        <p className={`text-[11px] font-black uppercase tracking-wider ${
                           result.prediction.includes('Tinggi') ? 'text-rose-600' : result.prediction.includes('Sedang') ? 'text-amber-600' : 'text-emerald-600'
-                        }`}>Status Prediksi</p>
-                        <p className="text-base font-black mt-1 text-slate-900">{result.prediction}</p>
-                        <p className="text-[11px] text-slate-500 font-medium mt-1">
-                          Skor BMI Terkirim: <span className="font-bold text-slate-800">{result.computedBmi}</span>
+                        }`}>Status Prediksi Tingkat Risiko</p>
+                        <p className="text-xl font-black mt-1 text-slate-900 tracking-tight">{result.prediction}</p>
+                        <p className="text-xs text-slate-500 font-medium mt-2">
+                          Skor Konversi BMI yang Terkirim: <span className="font-bold text-slate-800 bg-white px-2 py-0.5 rounded border border-slate-200 shadow-sm">{result.computedBmi}</span>
                         </p>
                       </div>
                     </div>
-                  ) : (
-                    <div className="mt-4 p-5 bg-slate-50 text-slate-400 border border-slate-100 rounded-3xl flex items-start gap-3">
-                      <Info size={18} className="text-slate-400 shrink-0 mt-0.5" />
-                      <p className="text-xs font-medium leading-relaxed">Silakan lengkapi parameter data di sebelah kiri, kemudian luncurkan analisis untuk melihat kalkulasi risiko kesehatan Anda.</p>
-                    </div>
-                  )}
-                  
-                </div>
+                  </div>
 
-              </div>
-            </form>
+                  {/* Kotak Respon Rekomendasi Medis dari Server */}
+                  <div className={`rounded-[2.5rem] bg-white border ${
+                    result.prediction.includes('Tinggi') ? 'border-rose-100' : result.prediction.includes('Sedang') ? 'border-amber-100' : 'border-emerald-100'
+                  } p-6 md:p-8 shadow-sm space-y-4`}>
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-xl text-white shadow-md ${
+                        result.prediction.includes('Tinggi') ? 'bg-rose-500' : result.prediction.includes('Sedang') ? 'bg-amber-500' : 'bg-emerald-500'
+                      }`}>
+                        <Sparkles size={18} />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">AI Medical Advice</p>
+                        <h3 className="text-lg font-black text-slate-900 tracking-tight">Rekomendasi Klinis Terpersonalisasi</h3>
+                      </div>
+                    </div>
+
+                    <div className="text-xs md:text-sm text-slate-700 font-medium leading-relaxed bg-slate-50/80 rounded-2xl p-6 border border-slate-100 whitespace-pre-line shadow-inner">
+                      {formatRecommendationText(result.aiRecommendation)}
+                    </div>
+                  </div>
+
+                </div>
+              ) : (
+                /* Kondisi Standby saat Belum Menekan Tombol Analisis */
+                <div className="rounded-[2.5rem] bg-white border border-slate-200/60 p-8 shadow-sm text-center">
+                  <div className="max-w-md mx-auto py-6 space-y-3">
+                    <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto border border-slate-100 text-slate-400">
+                      <Info size={20} />
+                    </div>
+                    <h4 className="text-sm font-bold text-slate-800">Menunggu Inisiasi Skrining</h4>
+                    <p className="text-xs text-slate-400 font-medium leading-relaxed">
+                      Silakan isi semua parameter bento grid di atas terlebih dahulu, kemudian klik tombol <strong>Mulai Analisis AI Sekarang</strong> untuk memunculkan ringkasan prediksi risiko beserta instruksi klinis dari server secara lengkap di area ini.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
 
           </main>
         </div>
