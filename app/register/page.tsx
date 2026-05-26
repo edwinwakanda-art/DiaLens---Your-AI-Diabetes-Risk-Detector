@@ -31,7 +31,7 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      // Mengirimkan data pendaftaran ke URL API backend Vercel kamu
+      // Mengirim data ke endpoint register backend Vercel kamu
       const response = await fetch('https://dia-lens-backend.vercel.app/api/health/register', {
         method: 'POST',
         headers: {
@@ -47,14 +47,13 @@ export default function RegisterPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        // Menangkap error "Email sudah terdaftar" atau error validasi lainnya dari backend
         throw new Error(data.message || 'Gagal mendaftar. Silakan coba lagi.');
       }
 
-      // JIKA BERHASIL: Simpan informasi user sementara jika diperlukan
+      // Menyimpan nama user ke localStorage agar bisa ditampilkan di Dashboard
       localStorage.setItem('userName', data.user.name);
       
-      // Arahkan ke halaman login setelah berhasil mendaftar ke database online
+      // Redirect ke halaman login setelah sukses mendaftar
       router.push('/login');
     } catch (err: any) {
       setError(err.message || 'Terjadi kesalahan jaringan.');
@@ -64,8 +63,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F4F8FF] text-slate-900 font-sans flex flex-col justify-center items-center selection:bg-blue-100 p-4">
-      
+    <div className="min-h-screen bg-[#F4F8FF] text-slate-900 font-sans flex flex-col justify-center items-center p-4">
       <main className="w-full max-w-[440px] bg-white rounded-[2.5rem] border border-slate-200/50 p-10 shadow-xl shadow-blue-100/50 flex flex-col items-center z-10">
         
         <div className="w-16 h-16 mb-2">
@@ -102,7 +100,7 @@ export default function RegisterPage() {
               placeholder="Masukkan nama lengkap"
               value={form.name}
               onChange={handleChange}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-bold text-slate-800 outline-none focus:border-[#00AEEF] focus:bg-white transition-all text-black shadow-inner"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-bold text-slate-800 outline-none focus:border-[#00AEEF] focus:bg-white text-black shadow-inner"
             />
           </div>
 
@@ -116,7 +114,7 @@ export default function RegisterPage() {
               placeholder="contoh@gmail.com"
               value={form.email}
               onChange={handleChange}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-bold text-slate-800 outline-none focus:border-[#00AEEF] focus:bg-white transition-all text-black shadow-inner"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-bold text-slate-800 outline-none focus:border-[#00AEEF] focus:bg-white text-black shadow-inner"
             />
           </div>
 
@@ -130,14 +128,14 @@ export default function RegisterPage() {
               placeholder="••••••"
               value={form.password}
               onChange={handleChange}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-bold text-slate-800 outline-none focus:border-[#00AEEF] focus:bg-white transition-all text-black shadow-inner"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-bold text-slate-800 outline-none focus:border-[#00AEEF] focus:bg-white text-black shadow-inner"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-[#00AEEF] hover:bg-[#009cd6] text-white font-black py-3.5 rounded-xl shadow-lg shadow-blue-100 transition-all text-xs uppercase tracking-wider mt-2 disabled:opacity-70 disabled:cursor-not-allowed"
+            className="w-full bg-[#00AEEF] hover:bg-[#009cd6] text-white font-black py-3.5 rounded-xl shadow-lg shadow-blue-100 transition-all text-xs uppercase tracking-wider mt-2 disabled:opacity-70"
           >
             {loading ? 'Membuat Akun...' : 'Daftar Sekarang'}
           </button>
