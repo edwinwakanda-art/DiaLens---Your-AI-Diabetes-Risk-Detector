@@ -25,7 +25,9 @@ import {
 } from 'recharts';
 import Sidebar from '../components/Sidebar';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://dialens-backend-production.up.railway.app';
+// Memastikan BASE_URL bersih dari tanda "/" di akhir string
+const RAW_URL = process.env.NEXT_PUBLIC_API_URL || 'https://dialens-backend-production.up.railway.app';
+const BASE_URL = RAW_URL.endsWith('/') ? RAW_URL.slice(0, -1) : RAW_URL;
 
 interface MedicalLog {
   id: string;
@@ -101,13 +103,14 @@ export default function DashboardPage() {
         return;
       }
 
-  const res = await fetch(`${BASE_URL}/api/health/records`, {
-  method: 'GET',
-  headers: {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json',
-  },
-});
+      // Memanggil endpoint backend dengan URL terformat rapi
+      const res = await fetch(`${BASE_URL}/api/health/records`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
 
       if (!res.ok) {
         throw new Error(`Backend merespons dengan kode kesalahan status: ${res.status}`);
@@ -125,10 +128,9 @@ export default function DashboardPage() {
       const normalizedHistory: MedicalLog[] = history.map((log: any) => {
         let extractedBmi = log.bmi ?? undefined;
         
-        // Perhitungan fallback otomatis jika BMI kosong di database
         if ((extractedBmi === undefined || Number(extractedBmi) === 0 || extractedBmi === '-') && log.weight) {
           const w = parseFloat(log.weight || 0);
-          const h = parseFloat(log.height || 0) / 100; 
+          const h = parseFloat(log.height || 0) / 100;
           if (w > 0 && h > 0) {
             extractedBmi = (w / (h * h)).toFixed(1);
           }
@@ -140,7 +142,6 @@ export default function DashboardPage() {
         if (extractedPrediction === 1 || extractedPrediction === "1") extractedPrediction = 'High';
         if (extractedPrediction === 0 || extractedPrediction === "0") extractedPrediction = 'Low';
 
-        // Mengambil variabel persentase risiko murni dari backend
         let finalDiabetesRisk = undefined;
         if (log.diabetesRisk !== undefined && log.diabetesRisk !== null) {
           finalDiabetesRisk = Number(log.diabetesRisk);
@@ -165,17 +166,15 @@ export default function DashboardPage() {
         };
       });
 
-      // 🎯 SINKRONISASI GRAFIK CHRONOLOGICAL (Maju ke kanan)
       const sortedForChart = [...normalizedHistory].sort(
         (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
       );
       setHistoryData(sortedForChart);
 
-      // 🎯 SINKRONISASI KARTU UTAMA REAL-TIME (Mengisolasi data terbaru)
       if (normalizedHistory.length > 0) {
         const latestLog = [...normalizedHistory].sort(
           (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-        )[0]; 
+        )[0];
 
         const riskStatus = latestLog.prediction ? latestLog.prediction.split(' (')[0] : 'Low';
 
@@ -243,11 +242,9 @@ export default function DashboardPage() {
   const currentRiskStyle = getRiskStyles(screeningData.lastRisk);
   const StatusIcon = currentRiskStyle.icon;
 
-  // Pemetaan sumbu diagram Recharts
   const chartData = historyData.map(({ date, bmi, prediction, diabetesRisk }) => {
-    let riskPercent = 15; 
+    let riskPercent = 15;
     
-    // Membaca persentase angka murni hasil kalkulasi model AI 
     if (diabetesRisk !== undefined && diabetesRisk !== null) {
       riskPercent = diabetesRisk;
     } else {
@@ -257,7 +254,7 @@ export default function DashboardPage() {
     }
 
     return {
-      Tanggal: new Date(date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) + 
+      Tanggal: new Date(date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) +
                ' ' + new Date(date).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
       'Indeks Massa Tubuh (BMI)': parseFloat(bmi) || 0,
       'Tingkat Risiko AI (%)': riskPercent,
@@ -266,7 +263,7 @@ export default function DashboardPage() {
 
   const formatRecommendationText = (text: string) => {
     if (!text) return '';
-    return text.split('*').map((part, i) => 
+    return text.split('*').map((part, i) =>
       i % 2 === 1 ? <strong key={i} className="font-extrabold text-slate-900 bg-blue-50/60 px-1 rounded">{part}</strong> : part
     );
   };
@@ -274,13 +271,11 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-[#F4F8FF] text-slate-900 font-sans selection:bg-blue-100">
       <div className="flex">
-        
         <Sidebar />
-
         <div className="md:pl-64 pt-20 md:pt-0 w-full">
           <main className="p-8 max-w-7xl mx-auto space-y-6">
             
-            {/* Header Dashboard */}
+            {/* Header */}
             <div className="rounded-[2.5rem] bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 p-8 shadow-xl shadow-blue-100/60 text-white relative overflow-hidden">
               <div className="absolute right-0 top-0 translate-x-10 -translate-y-10 w-72 h-72 bg-white/10 rounded-full blur-3xl pointer-events-none" />
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between relative z-10">
@@ -411,9 +406,8 @@ export default function DashboardPage() {
               )}
             </div>
 
-            {/* Log Activity & Quick Access */}
+            {/* Log Activity */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-              
               <div className="lg:col-span-2 rounded-[2.5rem] bg-white border border-slate-200/60 p-8 shadow-sm space-y-6">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Activity Logs</p>
@@ -455,11 +449,10 @@ export default function DashboardPage() {
                   </Link>
                 </div>
               </div>
-
             </div>
+
           </main>
         </div>
-
       </div>
     </div>
   );
