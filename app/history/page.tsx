@@ -1,11 +1,27 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Calendar, Scale, AlertTriangle, CheckCircle2, Eye, X, Download, FileText, Activity } from 'lucide-react';
+import { 
+  Search, 
+  Calendar, 
+  Scale, 
+  AlertTriangle, 
+  CheckCircle2, 
+  Eye, 
+  X, 
+  Download, 
+  FileText, 
+  Activity, 
+  RefreshCw, 
+  AlertOctagon, 
+  Trash2, 
+  Bookmark
+} from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import html2canvas from 'html2canvas-pro';
 import { jsPDF } from 'jspdf';
-import Image from 'next/image';
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'https://dia-lens-backend.vercel.app';
 
 interface HistoryItem {
   id: string;
@@ -18,64 +34,177 @@ interface HistoryItem {
   highChol: string;
   prediction: string;
   status: string;
+  diabetesRisk?: number;
 }
 
 export default function HistoryPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [historyData, setHistoryData] = useState<HistoryItem[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
-  // State untuk Modal
+  // State untuk Modal & Aksi
   const [selectedItem, setSelectedItem] = useState<HistoryItem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   
   const receiptRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const defaultData: HistoryItem[] = [
-      { id: "DL-9082", date: "2026-05-18", age: "45-49 thn", weight: "78 kg", height: "168 cm", bmi: "27.6", highBP: "Yes", highChol: "Yes", prediction: "Risiko Tinggi (76%)", status: "Danger" },
-      { id: "DL-8941", date: "2026-04-12", age: "25-29 thn", weight: "60 kg", height: "165 cm", bmi: "22.0", highBP: "No", highChol: "No", prediction: "Risiko Ringan (12%)", status: "Safe" },
-      { id: "DL-8712", date: "2026-03-01", age: "60-64 thn", weight: "72 kg", height: "160 cm", bmi: "28.1", highBP: "Yes", highChol: "No", prediction: "Risiko Sedang (43%)", status: "Warning" }
-    ];
+  // 🎯 1. AMBIL DATA DARI BACKEND (REAL-TIME SESUAI USER LOGIN)
+  const fetchUserHistory = async () => {
+    try {
+      setLoading(true);
+      setErrorMessage(null);
 
-    const stored = localStorage.getItem('medicalHistory');
-    if (stored) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setHistoryData(JSON.parse(stored));
-    } else {
-      localStorage.setItem('medicalHistory', JSON.stringify(defaultData));
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setErrorMessage("Token autentikasi tidak ditemukan. Silakan login kembali.");
+        setLoading(false);
+        return;
+      }
+
+      const response = await fetch(`${BACKEND_URL}/api/health/records`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Gagal memuat data riwayat (Status: ${response.status})`);
+      }
+
+      const resJson = await response.json();
       
-      setHistoryData(defaultData);
+      let rawLogs: any[] = [];
+      if (Array.isArray(resJson)) {
+        rawLogs = resJson;
+      } else if (resJson && typeof resJson === 'object') {
+        rawLogs = resJson.records || resJson.data || [];
+      }
+
+      const normalizedLogs: HistoryItem[] = rawLogs.map((log: any) => {
+        let extractedPrediction = log.prediction || log.risk_level || 'Low';
+        if (extractedPrediction === 1 || extractedPrediction === "1" || extractedPrediction.toLowerCase() === 'high') {
+          extractedPrediction = 'High Risk';
+        } else if (extractedPrediction === 0 || extractedPrediction === "0" || extractedPrediction.toLowerCase() === 'low') {
+          extractedPrediction = 'Low Risk';
+        }
+
+        const currentStatus = extractedPrediction.includes('High') ? 'Warning' : 'Safe';
+
+        return {
+          id: log.id || log._id || 'DL-Log',
+          date: log.date || log.createdAt || new Date().toISOString(),
+          age: log.age ? `${log.age} thn` : '-',
+          weight: log.weight ? `${log.weight} kg` : '-',
+          height: log.height ? `${log.height} cm` : '-',
+          bmi: log.bmi || '-',
+          highBP: log.highBP === 'Ya' || log.highBP === '1' || log.highBP === 'Yes' ? 'Ya' : 'Tidak',
+          highChol: log.highChol === 'Ya' || log.highChol === '1' || log.highChol === 'Yes' ? 'Ya' : 'Tidak',
+          prediction: extractedPrediction,
+          status: currentStatus,
+          diabetesRisk: log.diabetesRisk !== undefined ? log.diabetesRisk : undefined
+        };
+      });
+
+      const sortedLogs = normalizedLogs.sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+
+      setHistoryData(sortedLogs);
+    } catch (error: any) {
+      console.error("Kesalahan sinkronisasi riwayat:", error);
+      setErrorMessage(error.message || "Gagal menyambungkan dengan kluster database.");
+    } finally {
+      setLoading(false);
     }
+  };
+
+  // 🎯 2. FITUR HAPUS HISTORY (OPTIMISTIC UI UPDATE)
+  const handleDeleteHistory = async (id: string) => {
+    if (!window.confirm("Apakah Anda yakin ingin menghapus catatan riwayat medis ini secara permanen?")) {
+      return;
+    }
+
+    try {
+      setDeletingId(id);
+      const token = localStorage.getItem('token');
+      
+      const response = await fetch(`${BACKEND_URL}/api/health/records/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error("Gagal menghapus data dari kluster database backend.");
+      }
+
+      // Langsung hapus di frontend secara instan tanpa reload halaman
+      setHistoryData((prevData) => prevData.filter((item) => item.id !== id));
+      
+    } catch (error: any) {
+      alert(error.message || "Gagal memproses penghapusan.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  useEffect(() => {
+    fetchUserHistory();
   }, []);
 
-  const filteredData = historyData.filter(item => 
-    item.id.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredHistory = historyData.filter(item => {
+    const searchString = searchTerm.toLowerCase();
+    return (
+      item.id.toLowerCase().includes(searchString) ||
+      item.prediction.toLowerCase().includes(searchString) ||
+      item.date.includes(searchString)
+    );
+  });
 
-  // Fungsi Buka Modal
-  const openModal = (item: HistoryItem) => {
+  const handleOpenModal = (item: HistoryItem) => {
     setSelectedItem(item);
     setIsModalOpen(true);
   };
 
-  // Fungsi Download PDF
   const handleDownloadPDF = async () => {
-    if (!receiptRef.current || !selectedItem) return;
-    
+    if (!receiptRef.current) return;
+    setIsDownloading(true);
+
     try {
-      setIsDownloading(true);
-      const canvas = await html2canvas(receiptRef.current, { scale: 2 });
+      const element = receiptRef.current;
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false
+      });
+
       const imgData = canvas.toDataURL('image/png');
-      
-      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
       const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      const pdfHeight = pdf.internal.pageSize.getHeight();
       
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`Medical_Report_${selectedItem.id}.pdf`);
+      const padding = 15;
+      const contentWidth = pdfWidth - (padding * 2);
+      const contentHeight = (canvas.height * contentWidth) / canvas.width;
+
+      pdf.addImage(imgData, 'PNG', padding, padding, contentWidth, contentHeight);
+      pdf.save(`DiaLens_Hasil_Medis_${selectedItem?.id || 'Log'}.pdf`);
     } catch (error) {
-      console.error("Gagal mendownload PDF", error);
+      console.error('Gagal memproses pembuatan file PDF:', error);
+      alert('Terjadi kesalahan saat mengekspor dokumen PDF.');
     } finally {
       setIsDownloading(false);
     }
@@ -84,225 +213,286 @@ export default function HistoryPage() {
   return (
     <div className="min-h-screen bg-[#F4F8FF] text-slate-900 font-sans selection:bg-blue-100">
       <div className="flex">
-        
         <Sidebar />
 
         <div className="md:pl-64 pt-20 md:pt-0 w-full">
           <main className="p-8 max-w-7xl mx-auto space-y-6">
             
-            <div className="rounded-[2.5rem] bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 p-8 shadow-xl shadow-blue-100 text-white relative overflow-hidden">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between relative z-10">
+            {/* Header Utama dengan Warna Biru Khas DiaLens Website */}
+            <div className="rounded-[2.5rem] bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 p-8 shadow-md text-white relative overflow-hidden">
+              <div className="absolute -right-10 -bottom-10 w-60 h-60 bg-white/10 rounded-full blur-2xl" />
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 relative z-10">
                 <div>
-                  <p className="text-xs font-black uppercase tracking-[0.25em] text-blue-200">Screening Logs</p>
-                  <h1 className="mt-1 text-3xl font-black tracking-tight text-white">Riwayat Pemeriksaan Medis</h1>
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-blue-100/80">Data Center Logs</p>
+                  <h1 className="text-3xl font-black tracking-tight mt-1">Riwayat Skrining</h1>
+                  <p className="text-xs text-blue-50/80 font-medium mt-1">
+                    Kelola, cetak dokumen PDF resi, dan bersihkan log diagnosis medis AI sesuai akun Anda.
+                  </p>
                 </div>
-                <div className="text-blue-100 text-xs sm:text-sm max-w-xl leading-relaxed font-medium">
-                  Pantau dan tinjau kembali hasil kalkulasi risiko diabetes dari pemeriksaan yang telah Anda lakukan sebelumnya dalam satu rekapan tabel terpadu.
-                </div>
+                <button 
+                  onClick={fetchUserHistory}
+                  className="flex items-center gap-2 px-5 py-3 bg-white/15 hover:bg-white/25 backdrop-blur-md border border-white/10 text-white font-bold text-xs rounded-2xl shadow-sm transition-all active:scale-95 self-start sm:self-center"
+                >
+                  <RefreshCw size={14} className={loading ? "animate-spin text-blue-200" : ""} />
+                  <span>Segarkan Riwayat</span>
+                </button>
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-white px-6 py-4 rounded-2xl border border-slate-200/60 shadow-sm">
-              <div className="relative w-full sm:w-80">
-                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input 
-                  type="text" 
-                  placeholder="Cari ID Pemeriksaan..." 
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-10 pr-4 py-2 text-xs font-bold text-slate-800 outline-none focus:border-blue-500 focus:bg-white text-black"
-                />
+            {/* Error Alert Box */}
+            {errorMessage && (
+              <div className="rounded-[2rem] border-2 border-rose-100 bg-rose-50/50 p-6 flex items-center gap-4 shadow-sm">
+                <div className="p-2.5 rounded-xl bg-rose-500 text-white">
+                  <AlertOctagon size={20} />
+                </div>
+                <div>
+                  <h4 className="text-sm font-black text-rose-900">Sinkronisasi Jalur API Gagal</h4>
+                  <p className="text-xs text-rose-700 font-medium mt-0.5">{errorMessage}</p>
+                </div>
               </div>
-              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                Total Rekaman: <span className="text-blue-600 font-black">{filteredData.length} Data</span>
-              </div>
+            )}
+
+            {/* Kotak Pencarian Bertema Biru */}
+            <div className="flex items-center gap-3 bg-white border border-slate-200/60 p-4 rounded-2xl shadow-sm px-6 focus-within:border-blue-400 transition-colors">
+              <Search className="text-blue-500" size={18} />
+              <input 
+                type="text"
+                placeholder="Cari berdasarkan ID Log unik, status risiko AI, atau tanggal periksa..."
+                className="w-full text-xs font-semibold outline-none bg-transparent placeholder:text-slate-400 text-slate-700"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
 
-            <div className="rounded-[2.5rem] bg-white border border-slate-200/60 shadow-sm overflow-hidden">
+            {/* Tabel Riwayat Premium Berwarna Biru Website */}
+            <div className="bg-white border border-slate-200/60 rounded-[2.5rem] shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-slate-50/70 border-b border-slate-100">
-                      <th className="p-5 text-[10px] font-black uppercase tracking-wider text-slate-400">ID / Tanggal</th>
-                      <th className="p-5 text-[10px] font-black uppercase tracking-wider text-slate-400">Profil Fisik</th>
-                      <th className="p-5 text-[10px] font-black uppercase tracking-wider text-slate-400">Hasil BMI</th>
-                      <th className="p-5 text-[10px] font-black uppercase tracking-wider text-slate-400">Hipertensi</th>
-                      <th className="p-5 text-[10px] font-black uppercase tracking-wider text-slate-400">Kolesterol</th>
-                      <th className="p-5 text-[10px] font-black uppercase tracking-wider text-slate-400">Prediksi AI</th>
-                      <th className="p-5 text-[10px] font-black uppercase tracking-wider text-slate-400 text-center">Aksi</th>
+                    <tr className="bg-blue-50/50 border-b border-blue-100 text-[10px] font-black uppercase tracking-wider text-blue-600">
+                      <th className="py-5 px-6">Tanggal Periksa</th>
+                      <th className="py-5 px-6">ID Log</th>
+                      <th className="py-5 px-6">Indeks BMI</th>
+                      <th className="py-5 px-6">Tensi & Kolesterol</th>
+                      <th className="py-5 px-6">Tingkat Risiko AI</th>
+                      <th className="py-5 px-6 text-center">Aksi Manajemen</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {filteredData.map((row, index) => (
-                      <tr key={index} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="p-5">
-                          <div className="font-black text-xs text-slate-900">{row.id}</div>
-                          <div className="text-[10px] font-bold text-slate-400 mt-0.5 flex items-center gap-1">
-                            <Calendar size={11} /> {row.date}
+                  <tbody className="text-xs font-medium text-slate-600 divide-y divide-slate-100">
+                    {loading ? (
+                      <tr>
+                        <td colSpan={6} className="py-16 text-center text-slate-400 italic">
+                          <div className="flex flex-col items-center justify-center gap-3">
+                            <RefreshCw size={20} className="animate-spin text-blue-600" />
+                            <span className="font-bold text-blue-600 text-xs">Mengekstrak data medis riil akun aktif...</span>
                           </div>
-                        </td>
-                        <td className="p-5">
-                          <div className="text-xs font-bold text-slate-800">Umur: {row.age}</div>
-                          <div className="text-[10px] text-slate-500 mt-0.5 font-semibold">{row.weight} / {row.height}</div>
-                        </td>
-                        <td className="p-5">
-                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-sky-50 text-sky-700 border border-sky-100 text-xs font-black">
-                            <Scale size={12} /> {row.bmi}
-                          </div>
-                        </td>
-                        <td className="p-5">
-                          <span className={`inline-block px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase ${row.highBP === 'Yes' ? 'bg-rose-50 text-rose-600 border border-rose-100' : 'bg-slate-100 text-slate-500'}`}>{row.highBP}</span>
-                        </td>
-                        <td className="p-5">
-                          <span className={`inline-block px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase ${row.highChol === 'Yes' ? 'bg-orange-50 text-orange-600 border border-orange-100' : 'bg-slate-100 text-slate-500'}`}>{row.highChol}</span>
-                        </td>
-                        <td className="p-5">
-                          <div className="flex items-center gap-2">
-                            {row.status === 'Danger' && <AlertTriangle size={14} className="text-rose-500" />}
-                            {row.status === 'Warning' && <AlertTriangle size={14} className="text-amber-500" />}
-                            {row.status === 'Safe' && <CheckCircle2 size={14} className="text-emerald-500" />}
-                            <span className={`text-xs font-black ${row.status === 'Danger' ? 'text-rose-600' : row.status === 'Warning' ? 'text-amber-600' : 'text-emerald-600'}`}>{row.prediction}</span>
-                          </div>
-                        </td>
-                        <td className="p-5 text-center">
-                          <button 
-                            onClick={() => openModal(row)}
-                            className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white border border-blue-100 rounded-xl px-3 py-1.5 text-xs font-bold transition-all shadow-sm"
-                          >
-                            <Eye size={12} /> <span>Detail</span>
-                          </button>
                         </td>
                       </tr>
-                    ))}
+                    ) : filteredHistory.length > 0 ? (
+                      filteredHistory.map((item) => (
+                        <tr key={item.id} className="hover:bg-blue-50/20 transition-colors">
+                          {/* Tanggal */}
+                          <td className="py-4.5 px-6 whitespace-nowrap">
+                            <div className="flex items-center gap-2.5">
+                              <div className="p-2 bg-blue-50 rounded-lg text-blue-500 border border-blue-100/60">
+                                <Calendar size={14} />
+                              </div>
+                              <span className="font-bold text-slate-800">
+                                {new Date(item.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                              </span>
+                            </div>
+                          </td>
+                          
+                          {/* ID Log */}
+                          <td className="py-4.5 px-6 font-mono text-[11px] text-blue-500 font-bold">
+                            #{item.id.substring(0, 8).toUpperCase()}
+                          </td>
+                          
+                          {/* BMI */}
+                          <td className="py-4.5 px-6 whitespace-nowrap">
+                            <span className="font-extrabold px-2.5 py-1 rounded-xl text-[11px] bg-blue-50 text-blue-700 border border-blue-100">
+                              {item.bmi} BMI
+                            </span>
+                          </td>
+                          
+                          {/* Tensi & Kolesterol */}
+                          <td className="py-4.5 px-6 whitespace-nowrap text-[11px] space-y-0.5">
+                            <div>Tensi Tinggi: <span className={`font-black ${item.highBP === 'Ya' ? 'text-blue-600 bg-blue-50 px-1 rounded' : 'text-slate-400 bg-slate-100 px-1 rounded'}`}>{item.highBP}</span></div>
+                            <div>Kolesterol Tinggi: <span className={`font-black ${item.highChol === 'Ya' ? 'text-blue-600 bg-blue-50 px-1 rounded' : 'text-slate-400 bg-slate-100 px-1 rounded'}`}>{item.highChol}</span></div>
+                          </td>
+                          
+                          {/* Risiko AI */}
+                          <td className="py-4.5 px-6 whitespace-nowrap">
+                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-black uppercase tracking-wider ${
+                              item.status === 'Warning' 
+                                ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 border-blue-200' 
+                                : 'bg-gradient-to-r from-emerald-50 to-emerald-100/50 text-emerald-700 border-emerald-200'
+                            }`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${item.status === 'Warning' ? 'bg-blue-600' : 'bg-emerald-500'}`} />
+                              <span>{item.prediction} {item.diabetesRisk !== undefined ? `(${Math.round(item.diabetesRisk)}%)` : ''}</span>
+                            </span>
+                          </td>
+                          
+                          {/* Aksi Manajemen */}
+                          <td className="py-4.5 px-6 text-center whitespace-nowrap">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button 
+                                onClick={() => handleOpenModal(item)}
+                                className="p-2 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-xl transition-all"
+                                title="Lihat Detail Manifes Resi"
+                              >
+                                <Eye size={15} />
+                              </button>
+                              
+                              <button 
+                                onClick={() => handleDeleteHistory(item.id)}
+                                disabled={deletingId === item.id}
+                                className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all disabled:opacity-40"
+                                title="Hapus Log Selamanya"
+                              >
+                                {deletingId === item.id ? (
+                                  <span className="w-3.5 h-3.5 border-2 border-rose-600/30 border-t-rose-600 rounded-full animate-spin inline-block"></span>
+                                ) : (
+                                  <Trash2 size={15} />
+                                )}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={6} className="py-12 text-center text-slate-400 font-medium italic">
+                          Tidak ditemukan berkas rekam medis historis untuk akun ini.
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
             </div>
-
           </main>
         </div>
       </div>
 
-      {/* MODAL / POPUP RESEP MEDIS */}
+      {/* MODAL RESI DETAIL DENGAN LAYOUT PREMIUM */}
       {isModalOpen && selectedItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          
-          <div className="bg-white rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
             
             {/* Header Modal */}
-            <div className="flex justify-between items-center p-5 border-b border-slate-100 bg-slate-50/50">
-              <div className="flex items-center gap-2 text-slate-500">
-                <FileText size={18} />
-                <span className="text-xs font-bold uppercase tracking-widest">Medical Report</span>
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-blue-50/20">
+              <div className="flex items-center gap-2.5 text-slate-800">
+                <FileText size={20} className="text-blue-600" />
+                <h3 className="font-black text-base tracking-tight text-blue-900">Detail Dokumen Medis</h3>
               </div>
-              <button onClick={() => setIsModalOpen(false)} className="p-2 bg-slate-200/50 hover:bg-rose-100 hover:text-rose-600 rounded-full transition-colors">
-                <X size={16} />
+              <button 
+                onClick={() => setIsModalOpen(false)}
+                className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors"
+              >
+                <X size={18} />
               </button>
             </div>
 
-            {/* Konten Surat (Yang akan di-Screenshot/PDF-kan) */}
-            <div className="overflow-y-auto p-8 bg-slate-100">
-              <div ref={receiptRef} className="bg-white p-10 rounded-xl shadow-sm border border-slate-200 mx-auto w-full max-w-[21cm]"> {/* Format ukuran A4 */}
-                
-                {/* Kop Surat */}
-                <div className="flex items-center justify-between border-b-2 border-slate-900 pb-6 mb-8">
-                  <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 bg-blue-600 rounded-xl flex items-center justify-center shadow-md">
-                       <Image src="/Logo%20Dialens%20AI.png" alt="Logo" width={40} height={40} className="object-contain" />
-                    </div>
-                    <div>
-                      <h2 className="text-2xl font-black text-slate-900 tracking-tight">DiaLens Diagnostics</h2>
-                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em] mt-1">AI Powered Health Screening</p>
-                    </div>
+            {/* AREA RESI */}
+            <div className="p-6 overflow-y-auto flex-1 bg-slate-50/30">
+              <div 
+                ref={receiptRef}
+                className="bg-white border border-slate-200 p-8 rounded-3xl space-y-6 shadow-sm max-w-md mx-auto relative overflow-hidden"
+                style={{ fontFamily: 'sans-serif' }}
+              >
+                <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-blue-600 to-indigo-600" />
+
+                <div className="text-center space-y-1">
+                  <div className="flex justify-center items-center gap-2 text-blue-600 font-black text-xl tracking-tight">
+                    <Activity size={22} className="stroke-[3]" />
+                    <span>DIALENS</span>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-slate-800">Doc ID: {selectedItem.id}</p>
-                    <p className="text-xs text-slate-500 mt-1">Tanggal: {selectedItem.date}</p>
-                  </div>
+                  <p className="text-[10px] text-blue-500 font-bold uppercase tracking-widest">Sistem Prediksi Risiko Diabetes AI</p>
+                  <p className="text-[11px] text-slate-500 font-medium">Universitas Ahmad Dahlan, Yogyakarta</p>
                 </div>
 
-                <div className="text-center mb-8">
-                  <h3 className="text-xl font-black text-slate-900 uppercase tracking-widest border-y border-dashed border-slate-300 py-3 inline-block px-8">Surat Keterangan Medis</h3>
-                </div>
+                <div className="border-b border-dashed border-blue-100 my-4" />
 
-                {/* Data Pasien */}
-                <div className="mb-8">
-                  <h4 className="text-xs font-black text-blue-600 uppercase tracking-widest mb-4">A. Profil Biometrik Pasien</h4>
-                  <div className="grid grid-cols-2 gap-4 bg-slate-50 p-5 rounded-2xl border border-slate-100">
-                    <div>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase">Estimasi Umur</p>
-                      <p className="text-sm font-black text-slate-800">{selectedItem.age}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase">Indeks Massa Tubuh (BMI)</p>
-                      <p className="text-sm font-black text-slate-800">{selectedItem.bmi} <span className="text-xs font-normal text-slate-500 ml-1">({selectedItem.weight} / {selectedItem.height})</span></p>
-                    </div>
+                <div className="grid grid-cols-2 text-[11px] font-medium text-slate-500 gap-y-2">
+                  <div>No. Dokumen:</div>
+                  <div className="text-right font-bold text-slate-800 font-mono">#{selectedItem.id.toUpperCase()}</div>
+                  <div>Waktu Periksa:</div>
+                  <div className="text-right font-bold text-slate-800">
+                    {new Date(selectedItem.date).toLocaleString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })} WIB
                   </div>
                 </div>
 
-                {/* Data Klinis */}
-                <div className="mb-8">
-                  <h4 className="text-xs font-black text-blue-600 uppercase tracking-widest mb-4">B. Anamnesis Klinis</h4>
-                  <table className="w-full text-left border-collapse">
-                    <tbody>
-                      <tr className="border-b border-slate-100">
-                        <td className="py-3 text-sm font-bold text-slate-600 w-2/3">Riwayat Hipertensi (Tekanan Darah Tinggi)</td>
-                        <td className="py-3 text-right">
-                          <span className={`px-3 py-1 text-[10px] font-black uppercase rounded-lg ${selectedItem.highBP === 'Yes' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600'}`}>{selectedItem.highBP}</span>
-                        </td>
-                      </tr>
-                      <tr className="border-b border-slate-100">
-                        <td className="py-3 text-sm font-bold text-slate-600 w-2/3">Riwayat Hiperkolesterolemia (Kolesterol Tinggi)</td>
-                        <td className="py-3 text-right">
-                          <span className={`px-3 py-1 text-[10px] font-black uppercase rounded-lg ${selectedItem.highChol === 'Yes' ? 'bg-orange-100 text-orange-700' : 'bg-slate-100 text-slate-600'}`}>{selectedItem.highChol}</span>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
+                <div className="border-b border-slate-100 my-2" />
+
+                {/* Input Biometrik */}
+                <div className="space-y-3">
+                  <h4 className="text-[10px] font-black uppercase tracking-wider text-blue-600">Hasil Input Biometrik</h4>
+                  <div className="bg-blue-50/30 rounded-2xl p-4 space-y-2.5 text-xs text-slate-600 font-semibold">
+                    <div className="flex justify-between">
+                      <span>Rentang Usia</span>
+                      <span className="text-slate-900 font-bold">{selectedItem.age}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Berat Badan</span>
+                      <span className="text-slate-900 font-bold">{selectedItem.weight}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Tinggi Badan</span>
+                      <span className="text-slate-900 font-bold">{selectedItem.height}</span>
+                    </div>
+                    <div className="flex justify-between border-t border-blue-100 pt-2 mt-1">
+                      <span className="text-blue-600 font-bold">Massa Tubuh (BMI)</span>
+                      <span className="text-blue-600 font-black bg-blue-100/70 px-2 rounded">{selectedItem.bmi}</span>
+                    </div>
+                  </div>
                 </div>
+
+                {/* Kondisi Klinis */}
+                <div className="space-y-3">
+                  <h4 className="text-[10px] font-black uppercase tracking-wider text-blue-600">Kondisi Klinis Historis</h4>
+                  <div className="bg-blue-50/30 rounded-2xl p-4 space-y-2.5 text-xs text-slate-600 font-semibold">
+                    <div className="flex justify-between">
+                      <span>Riwayat Tekanan Darah Tinggi</span>
+                      <span className={`font-bold ${selectedItem.highBP === 'Ya' ? 'text-blue-600' : 'text-slate-900'}`}>{selectedItem.highBP}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Riwayat Kolesterol Tinggi</span>
+                      <span className={`font-bold ${selectedItem.highChol === 'Ya' ? 'text-blue-600' : 'text-slate-900'}`}>{selectedItem.highChol}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-b border-dashed border-blue-100 my-4" />
 
                 {/* Kesimpulan AI */}
-                <div className="mb-8">
-                  <h4 className="text-xs font-black text-blue-600 uppercase tracking-widest mb-4">C. Kesimpulan Analisis AI</h4>
-                  <div className={`p-6 rounded-2xl border-2 border-dashed ${
-                      selectedItem.status === 'Danger' ? 'bg-rose-50 border-rose-200' :
-                      selectedItem.status === 'Warning' ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50 border-emerald-200'
-                    }`}>
-                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tingkat Risiko Diabetes</p>
-                    <div className="flex items-center gap-3">
-                      {selectedItem.status === 'Danger' && <AlertTriangle size={28} className="text-rose-600" />}
-                      {selectedItem.status === 'Warning' && <AlertTriangle size={28} className="text-amber-600" />}
-                      {selectedItem.status === 'Safe' && <CheckCircle2 size={28} className="text-emerald-600" />}
-                      <h2 className={`text-2xl font-black uppercase ${
-                        selectedItem.status === 'Danger' ? 'text-rose-700' :
-                        selectedItem.status === 'Warning' ? 'text-amber-700' : 'text-emerald-700'
-                      }`}>
-                        {selectedItem.prediction}
-                      </h2>
-                    </div>
-                    <p className="text-xs text-slate-600 font-medium leading-relaxed mt-4">
-                      *Catatan: Dokumen ini dihasilkan secara otomatis oleh sistem Kecerdasan Buatan DiaLens. Hasil ini bersifat prediktif untuk skrining awal dan **bukan** merupakan diagnosis medis definitif. Konsultasikan dengan dokter spesialis untuk pemeriksaan lebih lanjut.
-                    </p>
+                <div className="text-center p-4 rounded-2xl border border-blue-100 bg-gradient-to-b from-blue-50/40 to-white flex flex-col items-center justify-center">
+                  <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Kesimpulan Analisis Model AI</p>
+                  <div className="mt-2 flex items-center gap-1.5 font-black text-base uppercase text-blue-600">
+                    <span>
+                      {selectedItem.prediction}
+                    </span>
+                    {selectedItem.diabetesRisk !== undefined && (
+                      <span className="text-slate-500 font-bold text-sm">
+                        ({Math.round(selectedItem.diabetesRisk)}%)
+                      </span>
+                    )}
                   </div>
                 </div>
 
-                {/* Tanda Tangan */}
-                <div className="mt-16 flex justify-end">
-                  <div className="text-center">
-                    <p className="text-xs text-slate-500 mb-16">DiaLens AI System</p>
-                    <div className="flex items-center justify-center gap-2 text-blue-600">
-                      <Activity size={16} />
-                      <span className="font-black text-xl italic tracking-tighter">Verified by AI</span>
-                    </div>
-                    <div className="w-48 h-px bg-slate-300 mt-2 mb-2 mx-auto"></div>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Digital Signature</p>
+                {/* Tanda Tangan Digital */}
+                <div className="pt-4 flex flex-col items-center justify-center text-center">
+                  <div className="text-blue-400 font-mono text-[9px] border border-blue-100 px-3 py-1 rounded-md tracking-wider uppercase bg-blue-50/50">
+                    DIALENS VALIDATED AI
                   </div>
+                  <div className="w-48 h-px bg-slate-200 mt-2 mb-1"></div>
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Digital Signature</p>
                 </div>
 
               </div>
             </div>
 
-            {/* Footer Modal / Tombol Download */}
+            {/* Footer Modal */}
             <div className="p-5 border-t border-slate-100 bg-white flex justify-end gap-3">
               <button 
                 onClick={() => setIsModalOpen(false)}
@@ -320,14 +510,13 @@ export default function HistoryPage() {
                 ) : (
                   <Download size={16} />
                 )}
-                <span>{isDownloading ? 'Menyimpan...' : 'Download PDF'}</span>
+                <span>{isDownloading ? 'Menyimpan...' : 'Unduh PDF'}</span>
               </button>
             </div>
 
           </div>
         </div>
       )}
-
     </div>
   );
 }

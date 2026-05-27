@@ -6,14 +6,14 @@ import {
   TrendingUp,
   User,
   Zap,
-  Clock,
   ArrowUpRight,
   ShieldAlert,
   AlertTriangle,
   CheckCircle2,
-  Sparkles
+  Sparkles,
+  RefreshCw,
+  AlertOctagon
 } from 'lucide-react';
-// Import modul Recharts untuk Diagram
 import {
   ResponsiveContainer,
   AreaChart,
@@ -24,6 +24,8 @@ import {
   CartesianGrid
 } from 'recharts';
 import Sidebar from '../components/Sidebar';
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'https://dia-lens-backend.vercel.app';
 
 interface MedicalLog {
   id: string;
@@ -38,6 +40,7 @@ interface MedicalLog {
   status: string;
   ai_recommendation?: string; 
   risk_level?: string;         
+  diabetesRisk?: number; 
 }
 
 interface StatCardProps {
@@ -69,12 +72,11 @@ const StatCard = ({ title, value, desc, icon: Icon, iconBg, gradientBg, valueCol
 );
 
 export default function DashboardPage() {
-  const [displayName] = useState(() => {
-    if (typeof window === 'undefined') return 'Pengguna DiaLens';
-    return localStorage.getItem('userName') || 'Pengguna DiaLens';
-  });
-  
+  const [displayName, setDisplayName] = useState('Pengguna DiaLens');
   const [historyData, setHistoryData] = useState<MedicalLog[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  
   const [screeningData, setScreeningData] = useState<{
     totalScreening: string;
     lastBmi: string;
@@ -87,73 +89,131 @@ export default function DashboardPage() {
     lastLog: null,
   });
 
-  useEffect(() => {
-    // Data default simulasi yang diisi menggunakan format single asterisk (*) dari backend kamu
-    const defaultData: MedicalLog[] = [
-      { 
-        id: 'DL-4385', 
-        date: '2026-05-26', 
-        age: '25-29 thn', 
-        weight: '60 kg', 
-        height: '165 cm', 
-        bmi: '22.0', 
-        highBP: 'No', 
-        highChol: 'No', 
-        prediction: 'Risiko Ringan (12%)', 
-        status: 'Safe',
-        risk_level: 'Low',
-        ai_recommendation: '*Interpretasi hasil* \nHasil skrining Anda menunjukkan risiko diabetes sebesar 19,8% dengan level "Low". Faktor "GenHlth" (kesehatan umum) menurunkan risiko, sementara "Age_BMI_Risk" sedikit menaikkan risiko; kolesterol Anda masih baik.\n\n*3 langkah konkret untuk minggu ini* \n1. *Tingkatkan serat harian* – Tambahkan satu porsi buah (mis. apel atau beri) dan satu porsi sayur berdaun hijau dalam setiap makan utama. Serat membantu mengontrol gula darah. \n2. *Jaga pola makan seimbang* – Ganti satu lauk berlemak (mis. gorengan) dengan protein tanpa lemak seperti ikan kukus atau tahu, serta pilih karbohidrat komplek (beras merah, quinoa, atau kacang). \n3. *Aktivitas ringan tiap hari* – Lakukan berjalan cepat 30 menit (atau 10 menit tiga kali) setelah makan siang atau malam. Ini mudah dilakukan dan mendukung kontrol berat badan serta sensitivitas insulin.\n\n*Kapan harus ke dokter* \nJika Anda merasakan gejala seperti haus berlebihan, sering buang air kecil, atau penurunan berat badan yang tidak dijelaskan dalam 2-3 minggu ke depan, atau bila hasil tes gula darah rutin (sebelum atau setelah makan) berada di atas batas normal, segeralah konsultasikan ke dokter.\n\n*Catatan:* Informasi ini merupakan hasil skrining AI DiaLens, bukan diagnosis medis. Untuk kepastian, silakan periksakan diri ke dokter.\n\nSemangat! Langkah kecil hari ini akan membantu Anda mempertahankan kesehatan jangka panjang. 🚀'
-      },
-      { 
-        id: 'DL-9082', 
-        date: '2026-05-18', 
-        age: '45-49 thn', 
-        weight: '78 kg', 
-        height: '168 cm', 
-        bmi: '27.6', 
-        highBP: 'Yes', 
-        highChol: 'Yes', 
-        prediction: 'Risiko Tinggi (76%)', 
-        status: 'Danger',
-        risk_level: 'High',
-        ai_recommendation: '*Interpretasi hasil* \nHasil prediksi cepat menunjukkan tingkat risiko tinggi. \n\n*3 langkah konkret untuk minggu ini* \n1. *Kurangi Karbohidrat* – Kurangi takaran porsi nasi putih harian. \n2. *Olahraga Rutin* – Lakukan kardio ringan terukur. \n3. *Cek Laboratorium* – Konsultasikan nilai HbA1c Anda.'
+  const fetchHealthRecords = async () => {
+    try {
+      setLoading(true);
+      setErrorMessage(null);
+      
+      const token = localStorage.getItem('token'); 
+      if (!token) {
+        setErrorMessage("Token autentikasi tidak ditemukan. Silakan lakukan login ulang.");
+        setLoading(false);
+        return;
       }
-    ];
 
-    let history: MedicalLog[] = [];
-    const storedHistory = localStorage.getItem('medicalHistory');
-
-    if (storedHistory) {
-      try {
-        history = JSON.parse(storedHistory) as MedicalLog[];
-      } catch {
-        history = defaultData;
-        localStorage.setItem('medicalHistory', JSON.stringify(defaultData));
-      }
-    } else {
-      history = defaultData;
-      localStorage.setItem('medicalHistory', JSON.stringify(defaultData));
-    }
-
-    // Mengurutkan data secara kronologis (lampau ke baru) khusus untuk kebutuhan Diagram Recharts
-    const sortedForChart = [...history].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    setHistoryData(sortedForChart);
-
-    if (history.length > 0) {
-      const latest = history[0];
-      const riskStatus = latest.prediction.split(' (')[0];
-
-      setScreeningData({
-        totalScreening: `${history.length} Kali`,
-        lastBmi: `${latest.bmi} BMI`,
-        lastRisk: riskStatus,
-        lastLog: latest,
+      const response = await fetch(`${BACKEND_URL}/api/health/records`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` 
+        }
       });
+
+      if (!response.ok) {
+        throw new Error(`Backend merespons dengan kode kesalahan status: ${response.status}`);
+      }
+
+      const resJson = await response.json();
+      
+      let history: any[] = [];
+      if (Array.isArray(resJson)) {
+        history = resJson;
+      } else if (resJson && typeof resJson === 'object') {
+        history = resJson.records || resJson.data || [];
+      }
+
+      const normalizedHistory: MedicalLog[] = history.map((log: any) => {
+        let extractedBmi = log.bmi ?? undefined;
+        
+        // Perhitungan fallback otomatis jika BMI kosong di database
+        if ((extractedBmi === undefined || Number(extractedBmi) === 0 || extractedBmi === '-') && log.weight) {
+          const w = parseFloat(log.weight || 0);
+          const h = parseFloat(log.height || 0) / 100; 
+          if (w > 0 && h > 0) {
+            extractedBmi = (w / (h * h)).toFixed(1);
+          }
+        }
+
+        const finalBmi = (extractedBmi !== undefined && extractedBmi !== null && String(extractedBmi).trim() !== '') ? String(extractedBmi) : '-';
+        
+        let extractedPrediction = log.prediction || log.risk_level || 'Low';
+        if (extractedPrediction === 1 || extractedPrediction === "1") extractedPrediction = 'High';
+        if (extractedPrediction === 0 || extractedPrediction === "0") extractedPrediction = 'Low';
+
+        // Mengambil variabel persentase risiko murni dari backend
+        let finalDiabetesRisk = undefined;
+        if (log.diabetesRisk !== undefined && log.diabetesRisk !== null) {
+          finalDiabetesRisk = Number(log.diabetesRisk);
+        } else if (log.results && log.results.diabetesRisk !== undefined) {
+          finalDiabetesRisk = Number(log.results.diabetesRisk);
+        }
+
+        return {
+          id: log.id || log._id || 'DL-Log',
+          date: log.date || log.createdAt || new Date().toISOString(),
+          age: log.age || '-',
+          weight: log.weight || '-',
+          height: log.height || '-',
+          bmi: finalBmi,
+          highBP: log.highBP || 'No',
+          highChol: log.highChol || 'No',
+          prediction: String(extractedPrediction),
+          status: log.status || 'Safe',
+          ai_recommendation: log.ai_recommendation || 'Tidak ada rekomendasi dari AI.',
+          risk_level: log.risk_level || String(extractedPrediction),
+          diabetesRisk: finalDiabetesRisk
+        };
+      });
+
+      // 🎯 SINKRONISASI GRAFIK CHRONOLOGICAL (Maju ke kanan)
+      const sortedForChart = [...normalizedHistory].sort(
+        (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+      );
+      setHistoryData(sortedForChart);
+
+      // 🎯 SINKRONISASI KARTU UTAMA REAL-TIME (Mengisolasi data terbaru)
+      if (normalizedHistory.length > 0) {
+        const latestLog = [...normalizedHistory].sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+        )[0]; 
+
+        const riskStatus = latestLog.prediction ? latestLog.prediction.split(' (')[0] : 'Low';
+
+        setScreeningData({
+          totalScreening: `${normalizedHistory.length} Kali`,
+          lastBmi: latestLog.bmi !== '-' && latestLog.bmi !== '0' ? `${latestLog.bmi} BMI` : '- BMI',
+          lastRisk: riskStatus,
+          lastLog: latestLog,
+        });
+      } else {
+        setScreeningData({
+          totalScreening: '0 Kali',
+          lastBmi: '- BMI',
+          lastRisk: 'Belum Ada',
+          lastLog: null,
+        });
+      }
+    } catch (error: any) {
+      console.error("Log kesalahan penarikan data API:", error);
+      setErrorMessage(error.message || "Gagal menyinkronkan database cluster grafik.");
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedName = localStorage.getItem('userName');
+      if (storedName) {
+        setDisplayName(storedName);
+      }
+    }
+    fetchHealthRecords();
   }, []);
 
   const getRiskStyles = (risk: string) => {
-    if (risk.includes('Tinggi')) {
+    const normRisk = risk.toLowerCase();
+    if (normRisk.includes('tinggi') || normRisk === 'danger' || normRisk === 'high') {
       return {
         bg: 'bg-rose-500',         
         text: 'text-rose-600',
@@ -162,7 +222,7 @@ export default function DashboardPage() {
         icon: ShieldAlert
       };
     }
-    if (risk.includes('Sedang')) {
+    if (normRisk.includes('sedang') || normRisk === 'warning' || normRisk === 'medium' || normRisk.includes('ringan')) {
       return {
         bg: 'bg-orange-500',       
         text: 'text-orange-600',
@@ -183,20 +243,27 @@ export default function DashboardPage() {
   const currentRiskStyle = getRiskStyles(screeningData.lastRisk);
   const StatusIcon = currentRiskStyle.icon;
 
-  // Memetakan riwayat rekam medis ke bentuk data diagram interaktif
-  const chartData = historyData.map(({ date, bmi, prediction }) => {
+  // Pemetaan sumbu diagram Recharts
+  const chartData = historyData.map(({ date, bmi, prediction, diabetesRisk }) => {
     let riskPercent = 15; 
-    if (prediction.includes('Sedang')) riskPercent = 45;
-    if (prediction.includes('Tinggi')) riskPercent = 75;
+    
+    // Membaca persentase angka murni hasil kalkulasi model AI 
+    if (diabetesRisk !== undefined && diabetesRisk !== null) {
+      riskPercent = diabetesRisk;
+    } else {
+      const normPred = prediction.toLowerCase();
+      if (normPred.includes('sedang') || normPred === 'medium' || normPred.includes('ringan')) riskPercent = 45;
+      if (normPred.includes('tinggi') || normPred === 'high') riskPercent = 75;
+    }
 
     return {
-      Tanggal: new Date(date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }),
-      'Indeks Massa Tubuh (BMI)': parseFloat(bmi),
+      Tanggal: new Date(date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) + 
+               ' ' + new Date(date).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+      'Indeks Massa Tubuh (BMI)': parseFloat(bmi) || 0,
       'Tingkat Risiko AI (%)': riskPercent,
     };
   });
 
-  // Parser teks akurat dengan pemisah tunggal '*' sesuai response backend Railway kamu
   const formatRecommendationText = (text: string) => {
     if (!text) return '';
     return text.split('*').map((part, i) => 
@@ -227,6 +294,28 @@ export default function DashboardPage() {
               </div>
             </div>
 
+            {/* Error Message Box */}
+            {errorMessage && (
+              <div className="rounded-[2rem] border-2 border-rose-100 bg-rose-50/50 p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+                <div className="flex items-center gap-4 text-center sm:text-left flex-col sm:flex-row">
+                  <div className="p-3 rounded-2xl bg-rose-500 text-white shadow-md shadow-rose-200">
+                    <AlertOctagon size={24} />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black text-rose-900 tracking-tight">Sinkronisasi Jalur API Terhambat</h4>
+                    <p className="text-xs text-rose-700 font-medium mt-0.5 leading-relaxed max-w-2xl">{errorMessage}</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={fetchHealthRecords}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-md transition-all active:scale-95 shrink-0"
+                >
+                  <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+                  <span>Muat Ulang</span>
+                </button>
+              </div>
+            )}
+
             {/* Grid Stat Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <StatCard title="Total Skrining" value={screeningData.totalScreening} desc="Jumlah akumulasi semua pemeriksaan Anda." icon={TrendingUp} iconBg="bg-blue-600" gradientBg="from-blue-50/40 to-white" />
@@ -242,7 +331,7 @@ export default function DashboardPage() {
               />
             </div>
 
-            {/* DIAGRAM TREN DIAGRAM TETAP AMAN DI SINI */}
+            {/* DIAGRAM TREN */}
             <div className="rounded-[2.5rem] bg-white border border-slate-200/60 p-6 md:p-8 shadow-sm">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                 <div>
@@ -262,7 +351,12 @@ export default function DashboardPage() {
               </div>
 
               <div className="w-full h-72 text-xs font-semibold">
-                {chartData.length > 0 ? (
+                {loading ? (
+                  <div className="w-full h-full flex items-center justify-center text-slate-400 italic gap-2">
+                    <RefreshCw size={14} className="animate-spin text-indigo-500" />
+                    <span>Menghubungkan kluster grafik...</span>
+                  </div>
+                ) : chartData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                       <defs>
@@ -277,14 +371,14 @@ export default function DashboardPage() {
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                       <XAxis dataKey="Tanggal" stroke="#94a3b8" tickLine={false} />
-                      <YAxis stroke="#94a3b8" tickLine={false} />
+                      <YAxis stroke="#94a3b8" tickLine={false} domain={[0, 100]} />
                       <Tooltip contentStyle={{ backgroundColor: '#ffffff', borderRadius: '1rem', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.05)' }} />
                       <Area type="monotone" dataKey="Indeks Massa Tubuh (BMI)" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorBmi)" />
                       <Area type="monotone" dataKey="Tingkat Risiko AI (%)" stroke="#f43f5e" strokeWidth={2} strokeDasharray="4 4" fillOpacity={1} fill="url(#colorRisk)" />
                     </AreaChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-slate-400 italic">Memuat grafik...</div>
+                  <div className="w-full h-full flex items-center justify-center text-slate-400 italic">Belum ada rekam medis tersimpan untuk akun ini.</div>
                 )}
               </div>
             </div>
@@ -301,13 +395,18 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {screeningData.lastLog?.ai_recommendation ? (
+              {loading ? (
+                <div className="text-xs text-slate-400 italic p-4 bg-slate-50 rounded-xl border border-dashed flex items-center gap-2">
+                  <RefreshCw size={12} className="animate-spin text-slate-400" />
+                  <span>Mengekstrak instruksi medis...</span>
+                </div>
+              ) : screeningData.lastLog?.ai_recommendation ? (
                 <div className="text-xs md:text-sm text-slate-700 font-medium leading-relaxed bg-slate-50/80 rounded-2xl p-6 border border-slate-100 whitespace-pre-line shadow-inner">
                   {formatRecommendationText(screeningData.lastLog.ai_recommendation)}
                 </div>
               ) : (
                 <div className="text-xs text-slate-400 italic p-4 bg-slate-50 rounded-xl border border-dashed">
-                  Belum ada data rekomendasi medis dari server.
+                  Belum memiliki data diagnosis rekomendasi dari kluster database.
                 </div>
               )}
             </div>
@@ -321,7 +420,9 @@ export default function DashboardPage() {
                   <h3 className="text-lg font-black text-slate-900 tracking-tight">Timeline Aktivitas Terbaru</h3>
                 </div>
                 <div className="space-y-4">
-                  {screeningData.lastLog ? (
+                  {loading ? (
+                    <p className="text-xs font-semibold text-slate-400 italic">Menyinkronkan log...</p>
+                  ) : screeningData.lastLog ? (
                     <div className={`flex items-start gap-4 p-4 rounded-2xl bg-gradient-to-r from-slate-50 to-white border ${currentRiskStyle.border}`}>
                       <div className={`p-2 ${currentRiskStyle.bg} text-white rounded-xl mt-0.5 shadow-sm`}>
                         <StatusIcon size={16} />
@@ -332,7 +433,7 @@ export default function DashboardPage() {
                           Sistem berhasil memprediksi parameter fisik dengan kesimpulan <span className={`font-bold ${currentRiskStyle.text}`}>{screeningData.lastLog.prediction}</span>.
                         </p>
                         <span className="inline-block text-[9px] font-black text-blue-600 bg-blue-50/80 px-2 py-0.5 rounded mt-2">
-                          {screeningData.lastLog.date}
+                          {new Date(screeningData.lastLog.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
                         </span>
                       </div>
                     </div>

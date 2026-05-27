@@ -90,27 +90,67 @@ export default function CheckKesehatanPage() {
       "9": "60-64 thn", "10": "65-69 thn", "11": "70-74 thn", "12": "75-79 thn", "13": "80+ thn"
     };
 
-    const bmiValue = parseFloat(currentBmi);
-    let predictionText = "Risiko Ringan (12%)";
-    let statusText = "Safe";
-    let textRecommendation = "";
+    try {
+      // 1. Ambil token akses login dari localStorage (karena backend dilindungi authMiddleware)
+      const token = localStorage.getItem('token'); 
+      
+      if (!token) {
+        alert("Akses ditolak! Silakan login terlebih dahulu ke akun DiaLens Anda.");
+        setLoading(false);
+        return;
+      }
 
-    // Logika rekomendasi dengan format asterisk tunggal (*) penyesuaian BE Railway
-    if (form.HighBP === "1" || bmiValue >= 27) {
-      predictionText = "Risiko Tinggi (76%)";
-      statusText = "Danger";
-      textRecommendation = `*Interpretasi hasil* \nHasil analisis mendeteksi tingkat risiko diabetes berada pada kategori *Risiko Tinggi*. Berdasarkan indikasi kombinasi tekanan darah dan indeks massa tubuh (BMI) Anda, diperlukan perhatian medis intensif.\n\n*3 langkah konkret untuk minggu ini* \n1. *Batasi Karbohidrat Sederhana* – Kurangi drastis porsi nasi putih, roti putih, mi, serta hilangkan konsumsi camilan dan minuman manis olahan. \n2. *Kardio Rutin Terukur* – Lakukan aktivitas fisik berupa jalan cepat atau bersepeda santai minimal 30 menit setiap hari untuk meningkatkan sensitivitas insulin. \n3. *Jadwalkan Cek Medis* – Segera buat janji temu dengan dokter untuk melakukan skrining klinis gula darah puasa (GDP) atau HbA1c di laboratorium.\n\n*Catatan:* Hasil skrining ini berbasis komputasi cerdas DiaLens. Selalu konsultasikan kondisi riil fisik Anda kepada dokter spesialis.`;
-    } else if (form.HighChol === "1" || bmiValue >= 24) {
-      predictionText = "Risiko Sedang (43%)";
-      statusText = "Warning";
-      textRecommendation = `*Interpretasi hasil* \nHasil analisis mendeteksi tingkat risiko diabetes berada pada kondisi *Risiko Sedang*. Kondisi tubuh Anda memerlukan beberapa modifikasi kebiasaan sebelum berkembang ke level yang membahayakan.\n\n*3 langkah konkret untuk minggu ini* \n1. *Tingkatkan Serat Harian* – Tambahkan minimal satu porsi sayur berdaun hijau (seperti bayam atau brokoli) dan buah rendah gula di setiap jam makan utama Anda. \n2. *Kurangi Camilan Malam* – Hindari makan berat atau mengonsumsi makanan ringan yang tinggi kalori dan lemak jenuh menjelang waktu tidur malam. \n3. *Kelola Waktu Istirahat* – Pastikan tubuh mendapatkan waktu tidur berkualitas selama 7-8 jam semalam untuk menjaga stabilitas hormon metabolisme harian.\n\n*Catatan:* Hasil skrining ini berbasis komputasi cerdas DiaLens. Jaga tren tubuh Anda agar tetap seimbang secara konsisten.`;
-    } else {
-      predictionText = "Risiko Ringan (12%)";
-      statusText = "Safe";
-      textRecommendation = `*Interpretasi hasil* \nHasil skrining Anda menunjukkan parameter yang relatif aman dengan kategori *Risiko Ringan*. Kondisi tubuh dan kebiasaan harian Anda sudah berada di jalur yang baik.\n\n*3 langkah konkret untuk minggu ini* \n1. *Pertahankan Hidrasi Tubuh* – Konsisten minum air putih minimal 2 hingga 2,5 liter per hari untuk menjaga kelancaran sistem ekskresi metabolisme tubuh. \n2. *Aktif Bergerak Setelah Makan* – Biasakan melakukan aktivitas berjalan kaki santai selama 10-15 menit setiap selesai mengonsumsi makanan berat. \n3. *Skrining Mandiri Berkala* – Lakukan pemantauan kesehatan mandiri secara rutin di DiaLens guna mengunci data tren stabilitas fisik Anda dalam jangka panjang.\n\n*Catatan:* Informasi ini merupakan hasil skrining AI DiaLens. Tetap pertahankan gaya hidup sehat ini untuk masa depan cerah Anda!`;
-    }
+      // 2. Siapkan payload angka biner numerik sesuai spesifikasi skema backend & AI
+      const payload = {
+        Age: parseInt(form.Age),
+        Weight: parseFloat(form.Weight),
+        Height: parseFloat(form.Height),
+        BMI: parseFloat(currentBmi),
+        HighBP: parseInt(form.HighBP),
+        HighChol: parseInt(form.HighChol),
+        CholCheck: parseInt(form.CholCheck),
+        PhysActivity: parseInt(form.PhysActivity),
+        Smoker: parseInt(form.Smoker),
+        HvyAlcoholConsump: parseInt(form.HvyAlcoholConsump),
+        GenHlth: 3 // Nilai default tambahan untuk kebutuhan pemetaan skema database di backend
+      };
 
-    setTimeout(() => {
+      // 3. Panggil API Backend DiaLens kamu
+      const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/health/predict';
+      
+      const response = await fetch(BACKEND_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` // Menyertakan token Bearer untuk lolos authMiddleware
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.status === 401) {
+        throw new Error('Sesi login Anda telah habis atau token tidak valid. Silakan login kembali.');
+      }
+
+      if (!response.ok) {
+        throw new Error('Gagal mendapatkan respon dari server backend.');
+      }
+
+      // Respons dari healthController.predict langsung berupa objek, tidak dibungkus .data lagi
+      const aiData = await response.json(); 
+
+      // Pemetaan teks tingkat risiko berdasarkan data dinamis probabilistik dari AI
+      let predictionText = "Risiko Ringan (12%)";
+      const percentage = aiData.probability ? Math.round(aiData.probability * 100) : null;
+
+      if (aiData.risk_level === 'High' || aiData.risk_level === 'high') {
+        predictionText = `Risiko Tinggi (${percentage || 76}%)`;
+      } else if (aiData.risk_level === 'Medium' || aiData.risk_level === 'medium') {
+        predictionText = `Risiko Sedang (${percentage || 43}%)`;
+      } else {
+        predictionText = `Risiko Ringan (${percentage || 12}%)`;
+      }
+
+      // 4. Simpan riwayat cadangan secara lokal di sisi client browser
       const newHistoryItem = {
         id: `DL-${Math.floor(1000 + Math.random() * 9000)}`,
         date: new Date().toISOString().split('T')[0],
@@ -121,8 +161,8 @@ export default function CheckKesehatanPage() {
         highBP: form.HighBP === "1" ? "Yes" : "No",
         highChol: form.HighChol === "1" ? "Yes" : "No",
         prediction: predictionText,
-        status: statusText,
-        ai_recommendation: textRecommendation
+        status: aiData.risk_level === 'High' ? 'Danger' : aiData.risk_level === 'Medium' ? 'Warning' : 'Safe',
+        ai_recommendation: aiData.ai_recommendation
       };
 
       const existingHistoryRaw = localStorage.getItem('medicalHistory');
@@ -131,21 +171,31 @@ export default function CheckKesehatanPage() {
         currentHistory = JSON.parse(existingHistoryRaw);
       }
 
-      const updatedHistory = [newHistoryItem, ...currentHistory];
-      localStorage.setItem('medicalHistory', JSON.stringify(updatedHistory));
+      localStorage.setItem('medicalHistory', JSON.stringify([newHistoryItem, ...currentHistory]));
 
+      // 5. Update State untuk langsung menampilkan respon riil server AI ke layar bento box
       setResult({
         prediction: predictionText,
         computedBmi: currentBmi,
-        aiRecommendation: textRecommendation
+        aiRecommendation: aiData.ai_recommendation || "Tidak ada rincian rekomendasi teks yang dikirimkan oleh server AI."
       });
+
+    } catch (error: any) {
+      console.error("Terjadi masalah saat berkomunikasi dengan API AI:", error);
+      alert(error.message || "Maaf, terjadi gangguan koneksi ke server AI Dialens.");
+    } finally {
       setLoading(false);
-    }, 1200);
+    }
   };
 
+  // Parser teks fleksibel untuk mengubah format **teks** dan *teks* menjadi HTML bold
   const formatRecommendationText = (text: string) => {
     if (!text) return '';
-    return text.split('*').map((part, i) => 
+    
+    // Normalisasi: mengubah penulisan double asterisk (**) tim AI menjadi single asterisk (*)
+    const normalizedText = text.replace(/\*\*/g, '*');
+    
+    return normalizedText.split('*').map((part, i) => 
       i % 2 === 1 ? <strong key={i} className="font-extrabold text-slate-900 bg-blue-50/60 px-1 rounded">{part}</strong> : part
     );
   };
@@ -175,7 +225,7 @@ export default function CheckKesehatanPage() {
               </div>
             </div>
 
-            {/* FORM FORM UTAMA */}
+            {/* FORM UTAMA */}
             <form onSubmit={handleSubmit} className="space-y-6">
               
               {/* LAYOUT FORM FULL 3 KOLOM BENTO GRID */}
@@ -261,7 +311,7 @@ export default function CheckKesehatanPage() {
                 <span className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-1.5 rounded-xl font-black text-sm shadow-md">{currentBmi}</span>
               </div>
 
-              {/* PERUBAHAN UTAMA: TOMBOL MULAI ANALISIS SEKARANG DI BAWAH (FULL WIDTH & ELEGAN) */}
+              {/* BUTTON TRIGGER SUBMIT */}
               <div className="pt-2">
                 <button 
                   type="submit" 
@@ -283,7 +333,7 @@ export default function CheckKesehatanPage() {
               </div>
             </form>
 
-            {/* PANEL OUTPUT HASIL DAN REKOMENDASI DI PALING BAWAH (LUAS DAN JELAS) */}
+            {/* PANEL OUTPUT HASIL DAN REKOMENDASI DI PALING BAWAH */}
             <div className="pt-4">
               {result ? (
                 <div className="grid grid-cols-1 gap-6">
