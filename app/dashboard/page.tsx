@@ -25,9 +25,32 @@ import {
 } from 'recharts';
 import Sidebar from '../components/Sidebar';
 
-// Memastikan BASE_URL bersih dari tanda "/" di akhir string
-const RAW_URL = process.env.NEXT_PUBLIC_API_URL || 'https://dialens-backend-production.up.railway.app';
-const BASE_URL = RAW_URL.endsWith('/') ? RAW_URL.slice(0, -1) : RAW_URL;
+// =========================================================================
+// 🔒 FUNGSI PERBAIKAN UTAMA: Memaksa format URL agar selalu absolut (bukan relatif)
+// =========================================================================
+const getCleanBaseUrl = (): string => {
+  let rawUrl = process.env.NEXT_PUBLIC_API_URL || 'https://dialens-backend-production.up.railway.app';
+  
+  rawUrl = rawUrl.trim();
+
+  // Menghilangkan tanda kutip jika terbawa di Environment Variable
+  rawUrl = rawUrl.replace(/['"]/g, '');
+
+  // JIKA nilai env tidak diawali http:// atau https://, wajib kita tambahkan otomatis
+  // Ini mencegah Vercel menganggap URL sebagai sub-folder lokal aplikasi
+  if (!rawUrl.startsWith('http://') && !rawUrl.startsWith('https://')) {
+    rawUrl = `https://${rawUrl}`;
+  }
+
+  // Hilangkan tanda garis miring '/' di ujung akhir URL jika ada
+  if (rawUrl.endsWith('/')) {
+    rawUrl = rawUrl.slice(0, -1);
+  }
+
+  return rawUrl;
+};
+
+const BASE_URL = getCleanBaseUrl();
 
 interface MedicalLog {
   id: string;
@@ -98,12 +121,12 @@ export default function DashboardPage() {
       
       const token = localStorage.getItem('token'); 
       if (!token) {
-        setErrorMessage("Token autentikasi tidak ditemukan. Silakan lakukan login ulang.");
+        setErrorMessage("Token autentikasi tidak ditemukan. Silakan lakukan login ulang ke sistem DiaLens.");
         setLoading(false);
         return;
       }
 
-      // Memanggil endpoint backend dengan URL terformat rapi
+      // Melakukan fetch menggunakan BASE_URL bersih yang dijamin berformat https://
       const res = await fetch(`${BASE_URL}/api/health/records`, {
         method: 'GET',
         headers: {
@@ -113,7 +136,7 @@ export default function DashboardPage() {
       });
 
       if (!res.ok) {
-        throw new Error(`Backend merespons dengan kode kesalahan status: ${res.status}`);
+        throw new Error(`Server Backend merespons dengan kode kesalahan status: ${res.status}`);
       }
 
       const resJson = await res.json();
