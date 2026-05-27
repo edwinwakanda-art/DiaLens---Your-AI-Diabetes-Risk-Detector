@@ -39,7 +39,7 @@ export default function LoginPage() {
 
     try {
       // Integrasi langsung dengan URL API backend Vercel kamu
-      const response = await fetch('https://dia-lens-backend.vercel.app/api/health/login', {
+      const response = await fetch('https://dialens-backend-production.up.railway.app/api/health/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

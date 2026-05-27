@@ -32,7 +32,7 @@ export default function RegisterPage() {
 
     try {
       // Mengirimkan data pendaftaran ke URL API backend Vercel kamu
-      const response = await fetch('https://dia-lens-backend.vercel.app/api/health/register', {
+      const response = await fetch('https://dialens-backend-production.up.railway.app/api/health/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
