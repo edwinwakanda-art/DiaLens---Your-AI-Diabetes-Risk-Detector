@@ -26,23 +26,18 @@ import {
 import Sidebar from '../components/Sidebar';
 
 // =========================================================================
-// 🔒 FUNGSI PERBAIKAN UTAMA: Memaksa format URL agar selalu absolut (bukan relatif)
+// 🔒 FUNGSI FORMAT URL: Memaksa format URL agar selalu absolut (bukan relatif)
 // =========================================================================
 const getCleanBaseUrl = (): string => {
   let rawUrl = process.env.NEXT_PUBLIC_API_URL || 'https://dialens-backend-production.up.railway.app';
   
   rawUrl = rawUrl.trim();
-
-  // Menghilangkan tanda kutip jika terbawa di Environment Variable
   rawUrl = rawUrl.replace(/['"]/g, '');
 
-  // JIKA nilai env tidak diawali http:// atau https://, wajib kita tambahkan otomatis
-  // Ini mencegah Vercel menganggap URL sebagai sub-folder lokal aplikasi
   if (!rawUrl.startsWith('http://') && !rawUrl.startsWith('https://')) {
     rawUrl = `https://${rawUrl}`;
   }
 
-  // Hilangkan tanda garis miring '/' di ujung akhir URL jika ada
   if (rawUrl.endsWith('/')) {
     rawUrl = rawUrl.slice(0, -1);
   }
@@ -82,7 +77,7 @@ const StatCard = ({ title, value, desc, icon: Icon, iconBg, gradientBg, valueCol
   <div className={`rounded-[2rem] border border-slate-200/60 bg-gradient-to-b ${gradientBg} p-6 shadow-sm transition-all duration-300 hover:shadow-md`}>
     <div className="flex items-center justify-between">
       <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 bg-white/80 px-2 py-0.5 rounded-md border border-slate-100">
-        User Activity
+        Aktivitas Pengguna
       </span>
       <div className={`p-2.5 rounded-xl ${iconBg} text-white shadow-sm`}>
         <Icon size={16} />
@@ -126,7 +121,6 @@ export default function DashboardPage() {
         return;
       }
 
-      // Melakukan fetch menggunakan BASE_URL bersih yang dijamin berformat https://
       const res = await fetch(`${BASE_URL}/api/health/records`, {
         method: 'GET',
         headers: {
@@ -141,19 +135,40 @@ export default function DashboardPage() {
 
       const resJson = await res.json();
       
+      // =========================================================================
+      // 🚀 PARSING FLEXIBLE: Membaca array data dari struktur JSON backend apa pun
+      // =========================================================================
       let history: any[] = [];
       if (Array.isArray(resJson)) {
         history = resJson;
       } else if (resJson && typeof resJson === 'object') {
-        history = resJson.records || resJson.data || [];
+        history = resJson.records || resJson.data || resJson.history || [];
       }
 
+      // Jika data rekam medis memang masih kosong dari database MongoDB cloud
+      if (history.length === 0) {
+        setHistoryData([]);
+        setScreeningData({
+          totalScreening: '0 Kali',
+          lastBmi: '- BMI',
+          lastRisk: 'Belum Ada',
+          lastLog: null,
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Menerapkan pemetaan struktur data agar sesuai dengan model visual frontend
       const normalizedHistory: MedicalLog[] = history.map((log: any) => {
-        let extractedBmi = log.bmi ?? undefined;
+        const ageVal = log.age || log.biometrics?.age || log.biometrics?.Age || '-';
+        const weightVal = log.weight || log.biometrics?.weight || '-';
+        const heightVal = log.height || log.biometrics?.height || '-';
+
+        let extractedBmi = log.bmi || log.biometrics?.bmi ?? undefined;
         
-        if ((extractedBmi === undefined || Number(extractedBmi) === 0 || extractedBmi === '-') && log.weight) {
-          const w = parseFloat(log.weight || 0);
-          const h = parseFloat(log.height || 0) / 100;
+        if ((extractedBmi === undefined || Number(extractedBmi) === 0 || extractedBmi === '-') && weightVal !== '-') {
+          const w = parseFloat(String(weightVal));
+          const h = parseFloat(String(heightVal)) / 100;
           if (w > 0 && h > 0) {
             extractedBmi = (w / (h * h)).toFixed(1);
           }
@@ -161,9 +176,9 @@ export default function DashboardPage() {
 
         const finalBmi = (extractedBmi !== undefined && extractedBmi !== null && String(extractedBmi).trim() !== '') ? String(extractedBmi) : '-';
         
-        let extractedPrediction = log.prediction || log.risk_level || 'Low';
-        if (extractedPrediction === 1 || extractedPrediction === "1") extractedPrediction = 'High';
-        if (extractedPrediction === 0 || extractedPrediction === "0") extractedPrediction = 'Low';
+        let extractedPrediction = log.prediction || log.risk_level || log.results?.riskLevel || log.results?.prediction || 'Low';
+        if (extractedPrediction === 1 || extractedPrediction === "1" || extractedPrediction === "High") extractedPrediction = 'High';
+        if (extractedPrediction === 0 || extractedPrediction === "0" || extractedPrediction === "Low") extractedPrediction = 'Low';
 
         let finalDiabetesRisk = undefined;
         if (log.diabetesRisk !== undefined && log.diabetesRisk !== null) {
@@ -175,49 +190,43 @@ export default function DashboardPage() {
         return {
           id: log.id || log._id || 'DL-Log',
           date: log.date || log.createdAt || new Date().toISOString(),
-          age: log.age || '-',
-          weight: log.weight || '-',
-          height: log.height || '-',
+          age: String(ageVal),
+          weight: String(weightVal),
+          height: String(heightVal),
           bmi: finalBmi,
-          highBP: log.highBP || 'No',
-          highChol: log.highChol || 'No',
+          highBP: log.highBP || log.clinical?.highBP || 'No',
+          highChol: log.highChol || log.clinical?.highChol || 'No',
           prediction: String(extractedPrediction),
-          status: log.status || 'Safe',
-          ai_recommendation: log.ai_recommendation || 'Tidak ada rekomendasi dari AI.',
+          status: log.status || (extractedPrediction === 'High' ? 'Warning' : 'Safe'),
+          ai_recommendation: log.ai_recommendation || log.results?.aiRecommendation || 'Tidak ada rekomendasi dari AI.',
           risk_level: log.risk_level || String(extractedPrediction),
           diabetesRisk: finalDiabetesRisk
         };
       });
 
+      // Mengurutkan data berdasarkan waktu dari terlama ke terbaru untuk grafik Recharts
       const sortedForChart = [...normalizedHistory].sort(
         (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
       );
       setHistoryData(sortedForChart);
 
-      if (normalizedHistory.length > 0) {
-        const latestLog = [...normalizedHistory].sort(
-          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-        )[0];
+      // Mengambil entri terbaru untuk komponen pencatatan kartu statistik atas
+      const latestLog = [...normalizedHistory].sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      )[0];
 
-        const riskStatus = latestLog.prediction ? latestLog.prediction.split(' (')[0] : 'Low';
+      const riskStatus = latestLog.prediction ? latestLog.prediction.split(' (')[0] : 'Low';
 
-        setScreeningData({
-          totalScreening: `${normalizedHistory.length} Kali`,
-          lastBmi: latestLog.bmi !== '-' && latestLog.bmi !== '0' ? `${latestLog.bmi} BMI` : '- BMI',
-          lastRisk: riskStatus,
-          lastLog: latestLog,
-        });
-      } else {
-        setScreeningData({
-          totalScreening: '0 Kali',
-          lastBmi: '- BMI',
-          lastRisk: 'Belum Ada',
-          lastLog: null,
-        });
-      }
+      setScreeningData({
+        totalScreening: `${normalizedHistory.length} Kali`,
+        lastBmi: latestLog.bmi !== '-' && latestLog.bmi !== '0' ? `${latestLog.bmi} BMI` : '- BMI',
+        lastRisk: riskStatus,
+        lastLog: latestLog,
+      });
+
     } catch (error: any) {
       console.error("Log kesalahan penarikan data API:", error);
-      setErrorMessage(error.message || "Gagal menyinkronkan database cluster grafik.");
+      setErrorMessage(error.message || "Gagal menyinkronkan data grafik dengan server.");
     } finally {
       setLoading(false);
     }
@@ -303,7 +312,7 @@ export default function DashboardPage() {
               <div className="absolute right-0 top-0 translate-x-10 -translate-y-10 w-72 h-72 bg-white/10 rounded-full blur-3xl pointer-events-none" />
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between relative z-10">
                 <div>
-                  <p className="text-xs font-black uppercase tracking-[0.25em] text-blue-200">User Dashboard</p>
+                  <p className="text-xs font-black uppercase tracking-[0.25em] text-blue-200">Panel Ringkasan</p>
                   <h1 className="mt-1 text-3xl font-black tracking-tight text-white">Selamat Datang, {displayName}!</h1>
                 </div>
                 <div className="text-blue-100 text-xs sm:text-sm max-w-xl leading-relaxed font-medium">
@@ -320,7 +329,7 @@ export default function DashboardPage() {
                     <AlertOctagon size={24} />
                   </div>
                   <div>
-                    <h4 className="text-sm font-black text-rose-900 tracking-tight">Sinkronisasi Jalur API Terhambat</h4>
+                    <h4 className="text-sm font-black text-rose-900 tracking-tight">Sinkronisasi API Terhambat</h4>
                     <p className="text-xs text-rose-700 font-medium mt-0.5 leading-relaxed max-w-2xl">{errorMessage}</p>
                   </div>
                 </div>
@@ -336,8 +345,8 @@ export default function DashboardPage() {
 
             {/* Grid Stat Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <StatCard title="Total Skrining" value={screeningData.totalScreening} desc="Jumlah akumulasi semua pemeriksaan Anda." icon={TrendingUp} iconBg="bg-blue-600" gradientBg="from-blue-50/40 to-white" />
-              <StatCard title="Indeks Massa Tubuh" value={screeningData.lastBmi} desc="Hasil BMI terbaru yang dihitung dari entri berat dan tinggi badan terakhir." icon={User} iconBg="bg-indigo-600" gradientBg="from-indigo-50/40 to-white" />
+              <StatCard title="Total Skrining" value={screeningData.totalScreening} desc="Jumlah akumulasi pemeriksaan Anda." icon={TrendingUp} iconBg="bg-blue-600" gradientBg="from-blue-50/40 to-white" />
+              <StatCard title="Indeks Massa Tubuh" value={screeningData.lastBmi} desc="Hasil BMI dari entri tinggi dan berat badan terakhir Anda." icon={User} iconBg="bg-indigo-600" gradientBg="from-indigo-50/40 to-white" />
               <StatCard 
                 title="Status Risiko AI" 
                 value={screeningData.lastRisk} 
@@ -353,7 +362,7 @@ export default function DashboardPage() {
             <div className="rounded-[2.5rem] bg-white border border-slate-200/60 p-6 md:p-8 shadow-sm">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Data Analytics</p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Analisis Grafik</p>
                   <h3 className="text-lg font-black text-slate-900 tracking-tight">Grafik Tren Kesehatan & Risiko DiaLens</h3>
                 </div>
                 <div className="flex flex-wrap gap-4 text-xs font-bold">
@@ -372,7 +381,7 @@ export default function DashboardPage() {
                 {loading ? (
                   <div className="w-full h-full flex items-center justify-center text-slate-400 italic gap-2">
                     <RefreshCw size={14} className="animate-spin text-indigo-500" />
-                    <span>Menghubungkan kluster grafik...</span>
+                    <span>Sinkronisasi grafik dengan database...</span>
                   </div>
                 ) : chartData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
@@ -408,15 +417,15 @@ export default function DashboardPage() {
                   <Sparkles size={18} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">AI Medical Advice</p>
-                  <h3 className="text-lg font-black text-slate-900 tracking-tight">Rekomendasi Klinis Terpersonalisasi</h3>
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Rekomendasi Klinis</p>
+                  <h3 className="text-lg font-black text-slate-900 tracking-tight">Saran Kesehatan Terpersonalisasi (AI)</h3>
                 </div>
               </div>
 
               {loading ? (
                 <div className="text-xs text-slate-400 italic p-4 bg-slate-50 rounded-xl border border-dashed flex items-center gap-2">
                   <RefreshCw size={12} className="animate-spin text-slate-400" />
-                  <span>Mengekstrak instruksi medis...</span>
+                  <span>Mengekstrak rekomendasi medis...</span>
                 </div>
               ) : screeningData.lastLog?.ai_recommendation ? (
                 <div className="text-xs md:text-sm text-slate-700 font-medium leading-relaxed bg-slate-50/80 rounded-2xl p-6 border border-slate-100 whitespace-pre-line shadow-inner">
@@ -424,21 +433,21 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <div className="text-xs text-slate-400 italic p-4 bg-slate-50 rounded-xl border border-dashed">
-                  Belum memiliki data diagnosis rekomendasi dari kluster database.
+                  Belum memiliki data diagnosis rekomendasi dari database cluster.
                 </div>
               )}
             </div>
 
-            {/* Log Activity */}
+            {/* Log Activity & Tombol Tindakan */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
               <div className="lg:col-span-2 rounded-[2.5rem] bg-white border border-slate-200/60 p-8 shadow-sm space-y-6">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Activity Logs</p>
-                  <h3 className="text-lg font-black text-slate-900 tracking-tight">Timeline Aktivitas Terbaru</h3>
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Riwayat Log</p>
+                  <h3 className="text-lg font-black text-slate-900 tracking-tight">Timeline Pemeriksaan Terbaru</h3>
                 </div>
                 <div className="space-y-4">
                   {loading ? (
-                    <p className="text-xs font-semibold text-slate-400 italic">Menyinkronkan log...</p>
+                    <p className="text-xs font-semibold text-slate-400 italic">Sinkronisasi log aktivitas...</p>
                   ) : screeningData.lastLog ? (
                     <div className={`flex items-start gap-4 p-4 rounded-2xl bg-gradient-to-r from-slate-50 to-white border ${currentRiskStyle.border}`}>
                       <div className={`p-2 ${currentRiskStyle.bg} text-white rounded-xl mt-0.5 shadow-sm`}>
@@ -447,7 +456,7 @@ export default function DashboardPage() {
                       <div>
                         <p className="text-xs font-bold text-slate-800">Melakukan Cek Kesehatan Mandiri ({screeningData.lastLog.id})</p>
                         <p className="text-[11px] text-slate-500 font-medium mt-1">
-                          Sistem berhasil memprediksi parameter fisik dengan kesimpulan <span className={`font-bold ${currentRiskStyle.text}`}>{screeningData.lastLog.prediction}</span>.
+                          Sistem memproses data fisik dengan hasil kesimpulan tingkat risiko <span className={`font-bold ${currentRiskStyle.text}`}>{screeningData.lastLog.prediction}</span>.
                         </p>
                         <span className="inline-block text-[9px] font-black text-blue-600 bg-blue-50/80 px-2 py-0.5 rounded mt-2">
                           {new Date(screeningData.lastLog.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
@@ -455,14 +464,14 @@ export default function DashboardPage() {
                       </div>
                     </div>
                   ) : (
-                    <p className="text-xs font-semibold text-slate-400 italic">Belum ada riwayat aktivitas log medis.</p>
+                    <p className="text-xs font-semibold text-slate-400 italic">Belum ada riwayat aktivitas log medis ditemukan.</p>
                   )}
                 </div>
               </div>
 
               <div className="lg:col-span-1 rounded-[2.5rem] bg-white border border-slate-200/60 p-6 shadow-sm space-y-4">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Quick Access</p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Akses Cepat</p>
                   <h3 className="text-lg font-black text-slate-900 tracking-tight">Mulai Tindakan</h3>
                 </div>
                 <div className="space-y-2.5">
