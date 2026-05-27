@@ -21,7 +21,8 @@ import Sidebar from '../components/Sidebar';
 import html2canvas from 'html2canvas-pro';
 import { jsPDF } from 'jspdf';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://dialens-backend-production.up.railway.app';
+// --- DIUBAH MENJADI BACKEND_URL AGAR SESUAI DENGAN PANGGILAN FETCH DI BAWAH ---
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'https://dialens-backend-production.up.railway.app';
 
 interface HistoryItem {
   id: string;
