@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
   Activity,
   Calendar,
@@ -16,6 +16,9 @@ import {
   Sparkles
 } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
+
+// --- CONFIGURATION: BASE URL PRODUCTION RAILWAY ---
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://dialens-backend-production.up.railway.app';
 
 // --- COMPONENT: COLORFUL FORM CARD (BENTO GRID) ---
 interface FormCardProps {
@@ -34,351 +37,373 @@ const FormCard = ({ label, alias, icon: Icon, iconBg, gradientBg, children }: Fo
         <div className={`p-2.5 rounded-xl ${iconBg} text-white shadow-sm`}>
           <Icon size={16} />
         </div>
-        <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 bg-white/80 px-2 py-0.5 rounded-md border border-slate-100">
+        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 font-mono bg-white/80 px-2 py-0.5 rounded-md border border-slate-100">
           {alias}
         </span>
       </div>
-      <label className="text-xs font-black uppercase tracking-[0.05em] text-slate-700 block px-0.5">
-        {label}
-      </label>
+      <div>
+        <h3 className="text-xs font-black text-slate-800 tracking-tight">{label}</h3>
+      </div>
     </div>
-    <div className="mt-3">
-      {children}
-    </div>
+    <div className="mt-4">{children}</div>
   </div>
 );
 
-// --- HALAMAN UTAMA ---
 export default function CheckKesehatanPage() {
-  // State Input Form menggunakan standar biner numerik (1/0) untuk model AI
-  const [form, setForm] = useState({
-    Age: '1',
-    Weight: '60',
-    Height: '165',
-    HighBP: '0',
-    HighChol: '0',
-    CholCheck: '1',
-    PhysActivity: '1',
-    Smoker: '0',
-    HvyAlcoholConsump: '0'
-  });
+  // 1. State Form Input
+  const [age, setAge] = useState('');
+  const [weight, setWeight] = useState('');
+  const [height, setHeight] = useState('');
+  const [highBP, setHighBP] = useState('');
+  const [highChol, setHighChol] = useState('');
+  const [bloodSugar, setBloodSugar] = useState('');
+  const [physicalActivity, setPhysicalActivity] = useState('');
+  const [smoker, setSmoker] = useState('');
+  const [hvyAlcohol, setHvyAlcohol] = useState('');
 
+  // 2. State Loading & Hasil Analisis API
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<{ prediction: string; computedBmi: string; aiRecommendation: string } | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [result, setResult] = useState<any>(null);
 
-  // Kalkulasi Skor BMI Real-time
-  const currentBmi = useMemo(() => {
-    const w = parseFloat(form.Weight);
-    const h = parseFloat(form.Height) / 100;
-    if (w > 0 && h > 0) {
-      return (w / (h * h)).toFixed(1);
-    }
-    return '0.0';
-  }, [form.Weight, form.Height]);
-
-  const handleChange = (field: string, value: string) => {
-    setForm(prev => ({ ...prev, [field]: value }));
-  };
-
+  // 3. Fungsi Submit Data ke Backend Railway
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setErrorMsg(null);
+    setResult(null);
 
-    const ageLabels: { [key: string]: string } = {
-      "1": "18-24 thn", "2": "25-29 thn", "3": "30-34 thn", "4": "35-39 thn",
-      "5": "40-44 thn", "6": "45-49 thn", "7": "50-54 thn", "8": "55-59 thn",
-      "9": "60-64 thn", "10": "65-69 thn", "11": "70-74 thn", "12": "75-79 thn", "13": "80+ thn"
+    // Validasi token login terlebih dahulu
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setErrorMsg("Sesi masuk Anda telah habis atau token tidak ditemukan. Silakan login kembali.");
+      setLoading(false);
+      return;
+    }
+
+    // Validasi sederhana kelengkapan input formulir
+    if (!age || !weight || !height || !highBP || !highChol || !bloodSugar || !physicalActivity || !smoker || !hvyAlcohol) {
+      setErrorMsg("Mohon lengkapi seluruh 9 parameter kesehatan pada bento grid di atas.");
+      setLoading(false);
+      return;
+    }
+
+    // Konversi nilai berat badan (kg) dan tinggi badan (cm) menjadi BMI standar
+    const heightInMeters = Number(height) / 100;
+    const computedBMI = Number(weight) / (heightInMeters * heightInMeters);
+    const finalBMI = parseFloat(computedBMI.toFixed(1));
+
+    // Susun objek data (payload) sesuai kebutuhan skema backend & service AI
+    const payload = {
+      age: Number(age),
+      weight: Number(weight),
+      height: Number(height),
+      bmi: finalBMI,
+      highBP: highBP,
+      highChol: highChol,
+      bloodSugar: bloodSugar,
+      physicalActivity: physicalActivity,
+      smoker: smoker,
+      hvyAlcohol: hvyAlcohol
     };
 
     try {
-      // 1. Ambil token akses login dari localStorage (karena backend dilindungi authMiddleware)
-      const token = localStorage.getItem('token'); 
-      
-      if (!token) {
-        alert("Akses ditolak! Silakan login terlebih dahulu ke akun DiaLens Anda.");
-        setLoading(false);
-        return;
-      }
-
-      // 2. Siapkan payload angka biner numerik sesuai spesifikasi skema backend & AI
-      const payload = {
-        Age: parseInt(form.Age),
-        Weight: parseFloat(form.Weight),
-        Height: parseFloat(form.Height),
-        BMI: parseFloat(currentBmi),
-        HighBP: parseInt(form.HighBP),
-        HighChol: parseInt(form.HighChol),
-        CholCheck: parseInt(form.CholCheck),
-        PhysActivity: parseInt(form.PhysActivity),
-        Smoker: parseInt(form.Smoker),
-        HvyAlcoholConsump: parseInt(form.HvyAlcoholConsump),
-        GenHlth: 3 // Nilai default tambahan untuk kebutuhan pemetaan skema database di backend
-      };
-
-      // 3. Panggil API Backend DiaLens kamu
-      const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/health/predict';
-      
-      const response = await fetch(BACKEND_URL, {
+      // Menembak endpoint backend Express di Railway secara dinamis
+      const response = await fetch(`${BASE_URL}/api/health/predict`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` // Menyertakan token Bearer untuk lolos authMiddleware
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(payload)
       });
 
-      if (response.status === 401) {
-        throw new Error('Sesi login Anda telah habis atau token tidak valid. Silakan login kembali.');
-      }
-
       if (!response.ok) {
-        throw new Error('Gagal mendapatkan respon dari server backend.');
+        throw new Error(`Server merespon dengan status error: ${response.status}`);
       }
 
-      // Respons dari healthController.predict langsung berupa objek, tidak dibungkus .data lagi
-      const aiData = await response.json(); 
-
-      // Pemetaan teks tingkat risiko berdasarkan data dinamis probabilistik dari AI
-      let predictionText = "Risiko Ringan (12%)";
-      const percentage = aiData.probability ? Math.round(aiData.probability * 100) : null;
-
-      if (aiData.risk_level === 'High' || aiData.risk_level === 'high') {
-        predictionText = `Risiko Tinggi (${percentage || 76}%)`;
-      } else if (aiData.risk_level === 'Medium' || aiData.risk_level === 'medium') {
-        predictionText = `Risiko Sedang (${percentage || 43}%)`;
-      } else {
-        predictionText = `Risiko Ringan (${percentage || 12}%)`;
-      }
-
-      // 4. Simpan riwayat cadangan secara lokal di sisi client browser
-      const newHistoryItem = {
-        id: `DL-${Math.floor(1000 + Math.random() * 9000)}`,
-        date: new Date().toISOString().split('T')[0],
-        age: ageLabels[form.Age] || "18-24 thn",
-        weight: `${form.Weight} kg`,
-        height: `${form.Height} cm`,
-        bmi: currentBmi,
-        highBP: form.HighBP === "1" ? "Yes" : "No",
-        highChol: form.HighChol === "1" ? "Yes" : "No",
-        prediction: predictionText,
-        status: aiData.risk_level === 'High' ? 'Danger' : aiData.risk_level === 'Medium' ? 'Warning' : 'Safe',
-        ai_recommendation: aiData.ai_recommendation
-      };
-
-      const existingHistoryRaw = localStorage.getItem('medicalHistory');
-      let currentHistory = [];
-      if (existingHistoryRaw) {
-        currentHistory = JSON.parse(existingHistoryRaw);
-      }
-
-      localStorage.setItem('medicalHistory', JSON.stringify([newHistoryItem, ...currentHistory]));
-
-      // 5. Update State untuk langsung menampilkan respon riil server AI ke layar bento box
+      const resData = await response.json();
+      
+      // Simpan data respons dari model AI ke state untuk ditampilkan ke bento box bawah
       setResult({
-        prediction: predictionText,
-        computedBmi: currentBmi,
-        aiRecommendation: aiData.ai_recommendation || "Tidak ada rincian rekomendasi teks yang dikirimkan oleh server AI."
+        prediction: resData.prediction || resData.risk_level || 'Low Risk',
+        diabetesRisk: resData.diabetesRisk !== undefined ? resData.diabetesRisk : null,
+        aiRecommendation: resData.recommendation || resData.message || 'Tetap jaga pola makan sehat, batasi konsumsi gula berlebih, serta lakukan aktivitas fisik secara teratur setiap hari.'
       });
 
-    } catch (error: any) {
-      console.error("Terjadi masalah saat berkomunikasi dengan API AI:", error);
-      alert(error.message || "Maaf, terjadi gangguan koneksi ke server AI Dialens.");
+    } catch (err: any) {
+      console.error("Gagal melakukan analisis kesehatan:", err);
+      setErrorMsg(err.message || "Gagal mendapatkan respon dari server backend Railway.");
     } finally {
       setLoading(false);
     }
   };
 
-  // Parser teks fleksibel untuk mengubah format **teks** dan *teks* menjadi HTML bold
+  // Fungsi pembantu untuk merapikan baris teks rekomendasi dari AI
   const formatRecommendationText = (text: string) => {
     if (!text) return '';
-    
-    // Normalisasi: mengubah penulisan double asterisk (**) tim AI menjadi single asterisk (*)
-    const normalizedText = text.replace(/\*\*/g, '*');
-    
-    return normalizedText.split('*').map((part, i) => 
-      i % 2 === 1 ? <strong key={i} className="font-extrabold text-slate-900 bg-blue-50/60 px-1 rounded">{part}</strong> : part
-    );
+    return text.replace(/\\n/g, '\n');
   };
-
-  const inputStyle = "w-full rounded-xl border border-slate-200 bg-white/90 px-3 py-2.5 text-xs font-bold text-slate-800 outline-none focus:border-blue-500 focus:bg-white shadow-inner text-black cursor-pointer";
 
   return (
     <div className="min-h-screen bg-[#F4F8FF] text-slate-900 font-sans selection:bg-blue-100">
       <div className="flex">
-        
         <Sidebar />
 
         <div className="md:pl-64 pt-20 md:pt-0 w-full">
-          <main className="p-8 max-w-7xl mx-auto space-y-6">
+          <main className="p-6 max-w-7xl mx-auto space-y-6">
             
-            {/* Header Area */}
-            <div className="rounded-[2.5rem] bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 p-8 shadow-xl shadow-blue-100 text-white relative overflow-hidden">
-              <div className="absolute right-0 top-0 translate-x-10 -translate-y-10 w-72 h-72 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between relative z-10">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-[0.25em] text-blue-200">AI Medical Screener</p>
-                  <h1 className="mt-1 text-3xl font-black tracking-tight text-white">Kalkulator Prediksi Risiko Diabetes</h1>
+            {/* Header Dashboard */}
+            <div className="rounded-[2.5rem] bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 p-8 shadow-md text-white relative overflow-hidden">
+              <div className="absolute -right-10 -bottom-10 w-60 h-60 bg-white/10 rounded-full blur-2xl" />
+              <div className="relative z-10 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Sparkles size={16} className="text-blue-200 animate-pulse" />
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-blue-100/90">DiaLens Intelligent Core</p>
                 </div>
-                <div className="text-blue-100 text-xs sm:text-sm max-w-xl leading-relaxed font-medium">
-                  Isi parameter tubuh Anda di bawah ini secara lengkap. Hasil kalkulasi dan rekomendasi tindakan medis khusus akan ditampilkan penuh di bagian bawah setelah Anda menekan tombol analisis.
-                </div>
+                <h1 className="text-2xl font-black tracking-tight">Skrining Risiko Diabetes AI</h1>
+                <p className="text-xs text-blue-50/80 font-medium max-w-xl">
+                  Masukkan parameter biometrik dan klinis harian Anda. Algoritma kami akan menghitung tingkat probabilitas risiko medis secara real-time.
+                </p>
               </div>
             </div>
 
-            {/* FORM UTAMA */}
+            {/* Error Container */}
+            {errorMsg && (
+              <div className="rounded-2xl border border-rose-100 bg-rose-50/60 p-4 text-xs font-semibold text-rose-700 flex items-center gap-3">
+                <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping inline-block flex-shrink-0" />
+                <p>{errorMsg}</p>
+              </div>
+            )}
+
+            {/* Main Form Dashboard */}
             <form onSubmit={handleSubmit} className="space-y-6">
               
-              {/* LAYOUT FORM FULL 3 KOLOM BENTO GRID */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* BENTO GRID 3x3 */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                 
-                {/* KELOMPOK 1: BIOMETRIK FISIK */}
-                <FormCard label="Kategori Umur" alias="_AGEG5YR" icon={Calendar} iconBg="bg-amber-500" gradientBg="from-amber-50/60 to-white">
-                  <select value={form.Age} onChange={e => handleChange('Age', e.target.value)} className={inputStyle}>
-                    <option value="1">1 = 18 - 24 tahun</option>
-                    <option value="2">2 = 25 - 29 tahun</option>
-                    <option value="3">3 = 30 - 34 tahun</option>
-                    <option value="4">4 = 35 - 39 tahun</option>
-                    <option value="5">5 = 40 - 44 tahun</option>
-                    <option value="6">6 = 45 - 49 tahun</option>
-                    <option value="7">7 = 50 - 54 tahun</option>
-                    <option value="8">8 = 55 - 59 tahun</option>
-                    <option value="9">9 = 60 - 64 tahun</option>
-                    <option value="10">10 = 65 - 69 tahun</option>
-                    <option value="11">11 = 70 - 74 tahun</option>
-                    <option value="12">12 = 75 - 79 tahun</option>
-                    <option value="13">13 = 80 tahun atau lebih</option>
+                {/* CARD 1: USIA */}
+                <FormCard label="Rentang Usia Klinis" alias="AGE-PRM" icon={Calendar} iconBg="bg-blue-500" gradientBg="from-blue-50/50 to-white">
+                  <select 
+                    value={age} 
+                    onChange={(e) => setAge(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-bold text-slate-700 outline-none focus:border-blue-400 transition-colors"
+                  >
+                    <option value="">Pilih rentang usia...</option>
+                    <option value="1">18 - 24 Tahun</option>
+                    <option value="2">25 - 29 Tahun</option>
+                    <option value="3">30 - 34 Tahun</option>
+                    <option value="4">35 - 39 Tahun</option>
+                    <option value="5">40 - 44 Tahun</option>
+                    <option value="6">45 - 49 Tahun</option>
+                    <option value="7">50 - 54 Tahun</option>
+                    <option value="8">55 - 59 Tahun</option>
+                    <option value="9">60 - 64 Tahun</option>
+                    <option value="10">65 - 69 Tahun</option>
+                    <option value="11">70 - 74 Tahun</option>
+                    <option value="12">75 - 79 Tahun</option>
+                    <option value="13">80 Tahun ke atas</option>
                   </select>
                 </FormCard>
 
-                <FormCard label="Berat Badan (kg)" alias="Weight" icon={Scale} iconBg="bg-sky-500" gradientBg="from-sky-50/60 to-white">
-                  <input type="number" value={form.Weight} onChange={e => handleChange('Weight', e.target.value)} placeholder="Contoh: 60" className={inputStyle} required />
+                {/* CARD 2: BERAT BADAN */}
+                <FormCard label="Berat Badan Aktual" alias="WGT-KG" icon={Scale} iconBg="bg-indigo-500" gradientBg="from-indigo-50/40 to-white">
+                  <div className="relative flex items-center">
+                    <input 
+                      type="number" 
+                      placeholder="Contoh: 68"
+                      value={weight}
+                      onChange={(e) => setWeight(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 pr-12 text-xs font-bold text-slate-700 outline-none focus:border-indigo-400 transition-colors"
+                    />
+                    <span className="absolute right-4 text-[10px] font-black text-slate-400 uppercase">KG</span>
+                  </div>
                 </FormCard>
 
-                <FormCard label="Tinggi Badan (cm)" alias="Height" icon={Activity} iconBg="bg-blue-600" gradientBg="from-blue-50/60 to-white">
-                  <input type="number" value={form.Height} onChange={e => handleChange('Height', e.target.value)} placeholder="Contoh: 165" className={inputStyle} required />
+                {/* CARD 3: TINGGI BADAN */}
+                <FormCard label="Tinggi Badan Tegak" alias="HGT-CM" icon={Activity} iconBg="bg-violet-500" gradientBg="from-violet-50/40 to-white">
+                  <div className="relative flex items-center">
+                    <input 
+                      type="number" 
+                      placeholder="Contoh: 170"
+                      value={height}
+                      onChange={(e) => setHeight(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 pr-12 text-xs font-bold text-slate-700 outline-none focus:border-violet-400 transition-colors"
+                    />
+                    <span className="absolute right-4 text-[10px] font-black text-slate-400 uppercase">CM</span>
+                  </div>
                 </FormCard>
 
-                {/* KELOMPOK 2: DIAGNOSTIK & GAYA HIDUP */}
-                <FormCard label="Tekanan Darah Tinggi" alias="HighBP" icon={HeartPulse} iconBg="bg-rose-500" gradientBg="from-rose-50/60 to-white">
-                  <select value={form.HighBP} onChange={e => handleChange('HighBP', e.target.value)} className={inputStyle}>
-                    <option value="0">No</option>
-                    <option value="1">Yes</option>
-                  </select>
+                {/* CARD 4: HIPERTENSI */}
+                <FormCard label="Riwayat Tekanan Darah Tinggi" alias="HBP-SYS" icon={HeartPulse} iconBg="bg-rose-500" gradientBg="from-rose-50/40 to-white">
+                  <div className="grid grid-cols-2 gap-3">
+                    {['Ya', 'Tidak'].map((opt) => (
+                      <button
+                        key={opt}
+                        type="button"
+                        onClick={() => setHighBP(opt)}
+                        className={`p-3 text-xs font-bold rounded-xl border transition-all ${
+                          highBP === opt 
+                            ? 'bg-rose-500 text-white border-rose-500 shadow-sm shadow-rose-100' 
+                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        {opt}
+                      </button>
+                    ))}
+                  </div>
                 </FormCard>
 
-                <FormCard label="Kolesterol Tinggi" alias="HighChol" icon={Droplets} iconBg="bg-orange-500" gradientBg="from-orange-50/60 to-white">
-                  <select value={form.HighChol} onChange={e => handleChange('HighChol', e.target.value)} className={inputStyle}>
-                    <option value="0">No</option>
-                    <option value="1">Yes</option>
-                  </select>
+                {/* CARD 5: KOLESTEROL */}
+                <FormCard label="Riwayat Kolesterol Tinggi" alias="CHO-VAL" icon={Droplets} iconBg="bg-amber-500" gradientBg="from-amber-50/40 to-white">
+                  <div className="grid grid-cols-2 gap-3">
+                    {['Ya', 'Tidak'].map((opt) => (
+                      <button
+                        key={opt}
+                        type="button"
+                        onClick={() => setHighChol(opt)}
+                        className={`p-3 text-xs font-bold rounded-xl border transition-all ${
+                          highChol === opt 
+                            ? 'bg-amber-500 text-white border-amber-500 shadow-sm shadow-amber-100' 
+                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        {opt}
+                      </button>
+                    ))}
+                  </div>
                 </FormCard>
 
-                <FormCard label="Pemeriksaan Kolesterol (5 Thn)" alias="CholCheck" icon={Eye} iconBg="bg-emerald-500" gradientBg="from-emerald-50/60 to-white">
-                  <select value={form.CholCheck} onChange={e => handleChange('CholCheck', e.target.value)} className={inputStyle}>
-                    <option value="1">Yes</option>
-                    <option value="0">No</option>
-                  </select>
+                {/* CARD 6: GULA DARAH */}
+                <FormCard label="Kondisi Gula Darah Tinggi" alias="BSG-GLU" icon={Sparkles} iconBg="bg-emerald-500" gradientBg="from-emerald-50/40 to-white">
+                  <div className="grid grid-cols-2 gap-3">
+                    {['Ya', 'Tidak'].map((opt) => (
+                      <button
+                        key={opt}
+                        type="button"
+                        onClick={() => setBloodSugar(opt)}
+                        className={`p-3 text-xs font-bold rounded-xl border transition-all ${
+                          bloodSugar === opt 
+                            ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm shadow-emerald-100' 
+                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        {opt}
+                      </button>
+                    ))}
+                  </div>
                 </FormCard>
 
-                <FormCard label="Aktif Berolahraga" alias="PhysActivity" icon={Dumbbell} iconBg="bg-purple-500" gradientBg="from-purple-50/60 to-white">
-                  <select value={form.PhysActivity} onChange={e => handleChange('PhysActivity', e.target.value)} className={inputStyle}>
-                    <option value="1">Yes</option>
-                    <option value="0">No</option>
-                  </select>
+                {/* CARD 7: AKTIVITAS FISIK */}
+                <FormCard label="Rutin Olahraga (30 Menit / Hari)" alias="EXE-ACT" icon={Dumbbell} iconBg="bg-cyan-500" gradientBg="from-cyan-50/40 to-white">
+                  <div className="grid grid-cols-2 gap-3">
+                    {['Ya', 'Tidak'].map((opt) => (
+                      <button
+                        key={opt}
+                        type="button"
+                        onClick={() => setPhysicalActivity(opt)}
+                        className={`p-3 text-xs font-bold rounded-xl border transition-all ${
+                          physicalActivity === opt 
+                            ? 'bg-cyan-500 text-white border-cyan-500 shadow-sm shadow-cyan-100' 
+                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        {opt}
+                      </button>
+                    ))}
+                  </div>
                 </FormCard>
 
-                <FormCard label="Status Perokok" alias="Smoker" icon={Cigarette} iconBg="bg-indigo-500" gradientBg="from-indigo-50/60 to-white">
-                  <select value={form.Smoker} onChange={e => handleChange('Smoker', e.target.value)} className={inputStyle}>
-                    <option value="0">No</option>
-                    <option value="1">Yes</option>
-                  </select>
+                {/* CARD 8: PEROKOK */}
+                <FormCard label="Riwayat / Status Perokok Aktif" alias="SMK-HAB" icon={Cigarette} iconBg="bg-orange-500" gradientBg="from-orange-50/40 to-white">
+                  <div className="grid grid-cols-2 gap-3">
+                    {['Ya', 'Tidak'].map((opt) => (
+                      <button
+                        key={opt}
+                        type="button"
+                        onClick={() => setSmoker(opt)}
+                        className={`p-3 text-xs font-bold rounded-xl border transition-all ${
+                          smoker === opt 
+                            ? 'bg-orange-500 text-white border-orange-500 shadow-sm shadow-orange-100' 
+                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        {opt}
+                      </button>
+                    ))}
+                  </div>
                 </FormCard>
 
-                <FormCard label="Konsumsi Alkohol Berat" alias="HvyAlcoholConsump" icon={Wine} iconBg="bg-cyan-500" gradientBg="from-cyan-50/60 to-white">
-                  <select value={form.HvyAlcoholConsump} onChange={e => handleChange('HvyAlcoholConsump', e.target.value)} className={inputStyle}>
-                    <option value="0">No</option>
-                    <option value="1">Yes</option>
-                  </select>
+                {/* CARD 9: ALCOHOL */}
+                <FormCard label="Konsumsi Alkohol Berat" alias="ALC-CON" icon={Wine} iconBg="bg-fuchsia-500" gradientBg="from-fuchsia-50/40 to-white">
+                  <div className="grid grid-cols-2 gap-3">
+                    {['Ya', 'Tidak'].map((opt) => (
+                      <button
+                        key={opt}
+                        type="button"
+                        onClick={() => setHvyAlcohol(opt)}
+                        className={`p-3 text-xs font-bold rounded-xl border transition-all ${
+                          hvyAlcohol === opt 
+                            ? 'bg-fuchsia-500 text-white border-fuchsia-500 shadow-sm shadow-fuchsia-100' 
+                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        {opt}
+                      </button>
+                    ))}
+                  </div>
                 </FormCard>
+
               </div>
 
-              {/* LIVE BAR BMI INFO */}
-              <div className="rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 p-4 border border-blue-100 flex items-center justify-between shadow-sm">
-                <div className="flex items-center gap-3">
-                  <div className="bg-blue-600 text-white p-2 rounded-xl text-xs font-black">BMI</div>
-                  <span className="text-xs font-bold text-slate-700">Hasil Konversi Otomatis Indeks Massa Tubuh Anda:</span>
-                </div>
-                <span className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-1.5 rounded-xl font-black text-sm shadow-md">{currentBmi}</span>
-              </div>
-
-              {/* BUTTON TRIGGER SUBMIT */}
-              <div className="pt-2">
-                <button 
-                  type="submit" 
-                  disabled={loading} 
-                  className="w-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white hover:opacity-95 font-black py-4 rounded-2xl shadow-lg shadow-indigo-100 transition-all flex items-center justify-center gap-3 text-xs md:text-sm uppercase tracking-widest active:scale-[0.99]"
+              {/* ACTION SUBMIT BUTTON */}
+              <div className="flex justify-end pt-2">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-black text-xs px-10 py-4 rounded-2xl shadow-lg shadow-blue-100 transition-all active:scale-98 disabled:opacity-70 flex items-center justify-center gap-3"
                 >
-                  {loading ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span>Sedang Memproses Data Medis...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles size={16} />
-                      <span>Mulai Analisis AI Sekarang</span>
-                    </>
-                  )}
+                  {loading && <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                  <span>{loading ? 'Memproses Matriks AI...' : 'Mulai Analisis AI Sekarang'}</span>
                 </button>
               </div>
+
             </form>
 
-            {/* PANEL OUTPUT HASIL DAN REKOMENDASI DI PALING BAWAH */}
+            {/* CONTAINER DOCK HASIL PREDIKSI (BOX BAWAH) */}
             <div className="pt-4">
               {result ? (
-                <div className="grid grid-cols-1 gap-6">
+                <div className="rounded-[2.5rem] bg-white border border-blue-100 p-8 shadow-sm space-y-6">
                   
-                  {/* Kotak Hasil Diagnostik Utama */}
-                  <div className="rounded-[2.5rem] bg-white border border-slate-200/60 p-6 md:p-8 shadow-sm">
-                    <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Analysis Output</p>
-                    <h3 className="mt-1 text-xl font-black text-slate-900 tracking-tight">Hasil Deteksi AI DiaLens</h3>
-                    
-                    <div className={`mt-5 p-6 rounded-3xl flex items-start gap-4 shadow-inner border ${
-                      result.prediction.includes('Tinggi') 
-                        ? 'bg-rose-50 border-rose-100 text-rose-800' 
-                        : result.prediction.includes('Sedang') 
-                          ? 'bg-amber-50 border-amber-100 text-amber-800'
-                          : 'bg-emerald-50 border-emerald-100 text-emerald-800'
-                    }`}>
-                      <CheckCircle2 size={26} className={`shrink-0 mt-0.5 ${
-                        result.prediction.includes('Tinggi') ? 'text-rose-500' : result.prediction.includes('Sedang') ? 'text-amber-500' : 'text-emerald-500'
-                      }`} />
-                      <div>
-                        <p className={`text-[11px] font-black uppercase tracking-wider ${
-                          result.prediction.includes('Tinggi') ? 'text-rose-600' : result.prediction.includes('Sedang') ? 'text-amber-600' : 'text-emerald-600'
-                        }`}>Status Prediksi Tingkat Risiko</p>
-                        <p className="text-xl font-black mt-1 text-slate-900 tracking-tight">{result.prediction}</p>
-                        <p className="text-xs text-slate-500 font-medium mt-2">
-                          Skor Konversi BMI yang Terkirim: <span className="font-bold text-slate-800 bg-white px-2 py-0.5 rounded border border-slate-200 shadow-sm">{result.computedBmi}</span>
-                        </p>
+                  {/* Bagian Atas: Tingkat Risiko */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+                    <div className="flex items-center gap-3">
+                      <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl border border-blue-100/60">
+                        <CheckCircle2 size={20} />
                       </div>
+                      <div>
+                        <h4 className="text-sm font-black text-slate-800 tracking-tight">Hasil Diagnosis DiaLens AI</h4>
+                        <p className="text-[11px] text-slate-400 font-medium mt-0.5">Berhasil disinkronisasi dengan core cluster server Railway.</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 self-start sm:self-center">
+                      <span className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full border text-[11px] font-black uppercase tracking-wider ${
+                        result.prediction.toLowerCase().includes('high')
+                          ? 'bg-blue-50 text-blue-700 border-blue-200'
+                          : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      }`}>
+                        <span className={`w-2 h-2 rounded-full ${result.prediction.toLowerCase().includes('high') ? 'bg-blue-600 animate-pulse' : 'bg-emerald-500'}`} />
+                        <span>{result.prediction} {result.diabetesRisk !== null ? `(${Math.round(result.diabetesRisk)}%)` : ''}</span>
+                      </span>
                     </div>
                   </div>
 
-                  {/* Kotak Respon Rekomendasi Medis dari Server */}
-                  <div className={`rounded-[2.5rem] bg-white border ${
-                    result.prediction.includes('Tinggi') ? 'border-rose-100' : result.prediction.includes('Sedang') ? 'border-amber-100' : 'border-emerald-100'
-                  } p-6 md:p-8 shadow-sm space-y-4`}>
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-xl text-white shadow-md ${
-                        result.prediction.includes('Tinggi') ? 'bg-rose-500' : result.prediction.includes('Sedang') ? 'bg-amber-500' : 'bg-emerald-500'
-                      }`}>
-                        <Sparkles size={18} />
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">AI Medical Advice</p>
-                        <h3 className="text-lg font-black text-slate-900 tracking-tight">Rekomendasi Klinis Terpersonalisasi</h3>
-                      </div>
+                  {/* Bagian Bawah: Rekomendasi Klinis */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-slate-700 font-bold text-xs">
+                      <Eye size={14} className="text-blue-500" />
+                      <span>Rekomendasi Tindakan Medis Preventif:</span>
                     </div>
 
                     <div className="text-xs md:text-sm text-slate-700 font-medium leading-relaxed bg-slate-50/80 rounded-2xl p-6 border border-slate-100 whitespace-pre-line shadow-inner">
@@ -388,7 +413,7 @@ export default function CheckKesehatanPage() {
 
                 </div>
               ) : (
-                /* Kondisi Standby saat Belum Menekan Tombol Analisis */
+                /* Kondisi Standby sebelum kirim formulir */
                 <div className="rounded-[2.5rem] bg-white border border-slate-200/60 p-8 shadow-sm text-center">
                   <div className="max-w-md mx-auto py-6 space-y-3">
                     <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto border border-slate-100 text-slate-400">
@@ -396,7 +421,7 @@ export default function CheckKesehatanPage() {
                     </div>
                     <h4 className="text-sm font-bold text-slate-800">Menunggu Inisiasi Skrining</h4>
                     <p className="text-xs text-slate-400 font-medium leading-relaxed">
-                      Silakan isi semua parameter bento grid di atas terlebih dahulu, kemudian klik tombol <strong>Mulai Analisis AI Sekarang</strong> untuk memunculkan ringkasan prediksi risiko beserta instruksi klinis dari server secara lengkap di area ini.
+                      Silakan isi semua parameter bento grid di atas terlebih dadaulu, kemudian klik tombol <strong>Mulai Analisis AI Sekarang</strong> untuk memunculkan ringkasan prediksi risiko beserta instruksi klinis dari server secara lengkap di area ini.
                     </p>
                   </div>
                 </div>
@@ -405,7 +430,6 @@ export default function CheckKesehatanPage() {
 
           </main>
         </div>
-
       </div>
     </div>
   );

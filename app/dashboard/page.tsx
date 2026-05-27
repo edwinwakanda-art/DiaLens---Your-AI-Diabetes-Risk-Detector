@@ -25,7 +25,7 @@ import {
 } from 'recharts';
 import Sidebar from '../components/Sidebar';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'https://dia-lens-backend.vercel.app';
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://dialens-backend-production.up.railway.app';
 
 interface MedicalLog {
   id: string;
