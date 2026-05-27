@@ -101,19 +101,19 @@ export default function DashboardPage() {
         return;
       }
 
-      const response = await fetch(`${BASE_URL}/api/health/records`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` 
-        }
-      });
+  const res = await fetch(`${BASE_URL}/api/health/records`, {
+  method: 'GET',
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json',
+  },
+});
 
-      if (!response.ok) {
-        throw new Error(`Backend merespons dengan kode kesalahan status: ${response.status}`);
+      if (!res.ok) {
+        throw new Error(`Backend merespons dengan kode kesalahan status: ${res.status}`);
       }
 
-      const resJson = await response.json();
+      const resJson = await res.json();
       
       let history: any[] = [];
       if (Array.isArray(resJson)) {
