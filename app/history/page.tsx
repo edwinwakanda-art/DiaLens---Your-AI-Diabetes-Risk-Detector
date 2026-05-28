@@ -21,7 +21,6 @@ import Sidebar from '../components/Sidebar';
 import html2canvas from 'html2canvas-pro';
 import { jsPDF } from 'jspdf';
 
-
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'https://dialens-backend-production.up.railway.app';
 
 interface HistoryItem {
@@ -34,8 +33,8 @@ interface HistoryItem {
   highBP: string;
   highChol: string;
   prediction: string;
-  status: string;
-  diabetesRisk?: number;
+  status: 'LOW' | 'MEDIUM' | 'HIGH'; // Status disesuaikan dengan kebutuhan baru
+  diabetesRisk: number; // Menyimpan angka persentase riil
 }
 
 export default function HistoryPage() {
@@ -85,30 +84,57 @@ export default function HistoryPage() {
       }
 
       const normalizedLogs: HistoryItem[] = rawLogs.map((log: any) => {
-        let extractedPrediction = log.prediction || log.risk_level || 'Low';
-        if (extractedPrediction === 1 || extractedPrediction === "1" || extractedPrediction.toLowerCase() === 'high') {
-          extractedPrediction = 'High Risk';
-        } else if (extractedPrediction === 0 || extractedPrediction === "0" || extractedPrediction.toLowerCase() === 'low') {
-          extractedPrediction = 'Low Risk';
+        // 1. Ekstrak nilai probabilitas/persentase secara fleksibel dari berbagai variasi key database
+        let rawRisk = log.diabetesRisk ?? log.probability ?? log.risk_score ?? log.diabetes_risk ?? 0;
+        
+        // Jika backend mengirim dalam bentuk desimal (0 - 1), konversikan ke persen (0 - 100)
+        if (rawRisk <= 1 && rawRisk > 0) {
+          rawRisk = rawRisk * 100;
+        }
+        const finalRiskPercent = Math.round(rawRisk);
+
+        // 2. Tentukan status secara dinamis berdasarkan ambang batas nilai persentase risiko
+        let calculatedStatus: 'LOW' | 'MEDIUM' | 'HIGH' = 'LOW';
+        let customPredictionText = 'Bukan Diabetes';
+
+        if (finalRiskPercent >= 70) {
+          calculatedStatus = 'HIGH';
+          customPredictionText = 'Risiko Tinggi';
+        } else if (finalRiskPercent >= 35) {
+          calculatedStatus = 'MEDIUM';
+          customPredictionText = 'Risiko Sedang';
         }
 
-        const currentStatus = extractedPrediction.includes('High') ? 'Warning' : 'Safe';
+        // Jalur alternatif jika database mengembalikan string kuesioner eksplisit
+        const dbRiskLevel = String(log.risk_level || log.prediction || '').toUpperCase();
+        if (dbRiskLevel.includes('HIGH') || dbRiskLevel.includes('TINGGI')) {
+          calculatedStatus = 'HIGH';
+          customPredictionText = 'Risiko Tinggi';
+        } else if (dbRiskLevel.includes('MEDIUM') || dbRiskLevel.includes('SEDANG')) {
+          calculatedStatus = 'MEDIUM';
+          customPredictionText = 'Risiko Sedang';
+        }
+
+        // 3. Normalisasi pembacaan parameter tensi & kolesterol (mengakomodasi huruf besar/kecil dari API)
+        const hasHighBP = log.HighBP === 1 || log.HighBP === '1' || log.highBP === 'Ya' || log.highBP === '1';
+        const hasHighChol = log.HighChol === 1 || log.HighChol === '1' || log.highChol === 'Ya' || log.highChol === '1';
 
         return {
           id: log.id || log._id || 'DL-Log',
           date: log.date || log.createdAt || new Date().toISOString(),
-          age: log.age ? `${log.age} thn` : '-',
+          age: log.Age ? `${log.Age} thn` : (log.age ? `${log.age} thn` : '-'),
           weight: log.weight ? `${log.weight} kg` : '-',
           height: log.height ? `${log.height} cm` : '-',
-          bmi: log.bmi || '-',
-          highBP: log.highBP === 'Ya' || log.highBP === '1' || log.highBP === 'Yes' ? 'Ya' : 'Tidak',
-          highChol: log.highChol === 'Ya' || log.highChol === '1' || log.highChol === 'Yes' ? 'Ya' : 'Tidak',
-          prediction: extractedPrediction,
-          status: currentStatus,
-          diabetesRisk: log.diabetesRisk !== undefined ? log.diabetesRisk : undefined
+          bmi: log.BMI || log.bmi || '-',
+          highBP: hasHighBP ? 'Ya' : 'Tidak',
+          highChol: hasHighChol ? 'Ya' : 'Tidak',
+          prediction: customPredictionText,
+          status: calculatedStatus,
+          diabetesRisk: finalRiskPercent
         };
       });
 
+      // Urutkan riwayat berdasarkan tanggal terbaru di atas
       const sortedLogs = normalizedLogs.sort(
         (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
       );
@@ -160,6 +186,7 @@ export default function HistoryPage() {
     const searchString = searchTerm.toLowerCase();
     return (
       item.id.toLowerCase().includes(searchString) ||
+      item.status.toLowerCase().includes(searchString) ||
       item.prediction.toLowerCase().includes(searchString) ||
       item.date.includes(searchString)
     );
@@ -191,8 +218,6 @@ export default function HistoryPage() {
       });
 
       const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      
       const padding = 15;
       const contentWidth = pdfWidth - (padding * 2);
       const contentHeight = (canvas.height * contentWidth) / canvas.width;
@@ -204,6 +229,29 @@ export default function HistoryPage() {
       alert('Terjadi kesalahan saat mengekspor dokumen PDF.');
     } finally {
       setIsDownloading(false);
+    }
+  };
+
+  // Fungsi pembantu untuk memetakan style warna badge berdasarkan status risiko
+  const getBadgeStyle = (status: 'LOW' | 'MEDIUM' | 'HIGH') => {
+    switch (status) {
+      case 'HIGH':
+        return 'bg-red-50 text-red-700 border-red-200';
+      case 'MEDIUM':
+        return 'bg-orange-50 text-orange-700 border-orange-200';
+      default:
+        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+    }
+  };
+
+  const getDotStyle = (status: 'LOW' | 'MEDIUM' | 'HIGH') => {
+    switch (status) {
+      case 'HIGH':
+        return 'bg-red-500';
+      case 'MEDIUM':
+        return 'bg-orange-500';
+      default:
+        return 'bg-emerald-500';
     }
   };
 
@@ -310,14 +358,11 @@ export default function HistoryPage() {
                             <div>Kolesterol Tinggi: <span className={`font-black ${item.highChol === 'Ya' ? 'text-blue-600 bg-blue-50 px-1 rounded' : 'text-slate-400 bg-slate-100 px-1 rounded'}`}>{item.highChol}</span></div>
                           </td>
                           
+                          {/* 🎯 DIUBAH MENJADI PERSENTASE DAN STR KATEGORI DINAMIS (LOW / MEDIUM / HIGH) */}
                           <td className="py-4.5 px-6 whitespace-nowrap">
-                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-black uppercase tracking-wider ${
-                              item.status === 'Warning' 
-                                ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 border-blue-200' 
-                                : 'bg-gradient-to-r from-emerald-50 to-emerald-100/50 text-emerald-700 border-emerald-200'
-                            }`}>
-                              <span className={`w-1.5 h-1.5 rounded-full ${item.status === 'Warning' ? 'bg-blue-600' : 'bg-emerald-500'}`} />
-                              <span>{item.prediction} {item.diabetesRisk !== undefined ? `(${Math.round(item.diabetesRisk)}%)` : ''}</span>
+                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-black uppercase tracking-wider ${getBadgeStyle(item.status)}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${getDotStyle(item.status)}`} />
+                              <span>{item.status} RISK ({item.diabetesRisk}%)</span>
                             </span>
                           </td>
                           
@@ -360,6 +405,7 @@ export default function HistoryPage() {
         </div>
       </div>
 
+      {/* MODAL PREVIEW DETAIL */}
       {isModalOpen && selectedItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
           <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
@@ -446,11 +492,9 @@ export default function HistoryPage() {
 
                 <div className="text-center p-4 rounded-2xl border border-blue-100 bg-gradient-to-b from-blue-50/40 to-white flex flex-col items-center justify-center">
                   <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Kesimpulan Analisis Model AI</p>
-                  <div className="mt-2 flex items-center gap-1.5 font-black text-base uppercase text-blue-600">
-                    <span>{selectedItem.prediction}</span>
-                    {selectedItem.diabetesRisk !== undefined && (
-                      <span className="text-slate-500 font-bold text-sm">({Math.round(selectedItem.diabetesRisk)}%)</span>
-                    )}
+                  <div className="mt-2 flex items-center gap-1.5 font-black text-sm uppercase text-blue-600">
+                    <span>{selectedItem.status} RISK</span>
+                    <span className="text-slate-500 font-bold text-xs">({selectedItem.diabetesRisk}%)</span>
                   </div>
                 </div>
 

@@ -25,7 +25,6 @@ import {
 } from 'recharts';
 import Sidebar from '../components/Sidebar';
 
-// Mengamankan URL dari tanda '/' di ujung variabel Vercel
 const RAW_URL = process.env.NEXT_PUBLIC_API_URL || 'https://dialens-backend-production.up.railway.app';
 const BASE_URL = RAW_URL.replace(/\/$/, '');
 
@@ -82,12 +81,14 @@ export default function DashboardPage() {
   const [screeningData, setScreeningData] = useState<{
     totalScreening: string;
     lastBmi: string;
-    lastRisk: string;
+    lastRisk: string; // Akan menyimpan string gabungan ex: "HIGH RISK (85%)"
+    lastRiskLabel: string; // Murni label pendek (LOW/MEDIUM/HIGH) untuk pewarnaan card
     lastLog: MedicalLog | null;
   }>({
     totalScreening: '0 Kali',
     lastBmi: '- BMI',
     lastRisk: 'Belum Ada',
+    lastRiskLabel: 'LOW',
     lastLog: null,
   });
 
@@ -117,7 +118,6 @@ export default function DashboardPage() {
 
       const resJson = await res.json();
       
-      // Mengatasi pembacaan array flat langsung dari backend controller
       let history: any[] = [];
       if (Array.isArray(resJson)) {
         history = resJson;
@@ -126,13 +126,14 @@ export default function DashboardPage() {
       }
 
       const normalizedHistory: MedicalLog[] = history.map((log: any) => {
-        // Pemetaan data yang disesuaikan dengan key flattened object dari backend
         const finalBmi = log.bmi && log.bmi !== '-' ? String(parseFloat(log.bmi).toFixed(1)) : '-';
         
-        // Memetakan tingkat risiko agar seragam teksnya (High / Medium / Low)
         let riskText = log.risk_level || log.prediction || 'Low';
         if (riskText === '1' || riskText === 1 || riskText === 'Diabetes Terdeteksi') riskText = 'High';
         if (riskText === '0' || riskText === 0 || riskText === 'Aman / Normal') riskText = 'Low';
+
+        // Menormalisasi properti diabetesRisk secara fleksibel
+        const rawRisk = log.diabetesRisk ?? log.probability ?? log.risk_score ?? 0;
 
         return {
           id: log.id || log._id || 'DL-Log',
@@ -147,26 +148,43 @@ export default function DashboardPage() {
           status: log.status || 'Safe',
           ai_recommendation: log.ai_recommendation || 'Tidak ada rekomendasi dari AI.',
           risk_level: riskText,
-          diabetesRisk: log.diabetesRisk !== undefined ? Number(log.diabetesRisk) : undefined
+          diabetesRisk: rawRisk !== undefined ? Number(rawRisk) : undefined
         };
       });
 
-      // 🎯 SINKRONISASI GRAFIK CHRONOLOGICAL (Urutan waktu maju dari kiri ke kanan)
       const sortedForChart = [...normalizedHistory].sort(
         (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
       );
       setHistoryData(sortedForChart);
 
-      // 🎯 SINKRONISASI KARTU UTAMA REAL-TIME (Mengambil entri paling terbaru)
+      // 🎯 SINKRONISASI KARTU UTAMA REAL-TIME DENGAN PERSENTASE DAN STR KATEGORI DINAMIS
       if (normalizedHistory.length > 0) {
         const latestLog = [...normalizedHistory].sort(
           (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
         )[0]; 
 
+        // Hitung persentase risiko terurai dari database
+        let numericRisk = latestLog.diabetesRisk ?? 0;
+        if (numericRisk <= 1 && numericRisk > 0) {
+          numericRisk = numericRisk * 100;
+        }
+        const finalRiskPercent = Math.round(numericRisk);
+
+        // Petakan string penanda tingkatan risiko secara objektif berbasis persentase
+        let textStatus = 'LOW';
+        const rawStringRisk = String(latestLog.risk_level || latestLog.prediction || '').toUpperCase();
+        
+        if (finalRiskPercent >= 70 || rawStringRisk.includes('HIGH') || rawStringRisk.includes('TINGGI')) {
+          textStatus = 'HIGH';
+        } else if (finalRiskPercent >= 35 || rawStringRisk.includes('MEDIUM') || rawStringRisk.includes('SEDANG')) {
+          textStatus = 'MEDIUM';
+        }
+
         setScreeningData({
           totalScreening: `${normalizedHistory.length} Kali`,
           lastBmi: latestLog.bmi !== '-' ? `${latestLog.bmi} BMI` : '- BMI',
-          lastRisk: latestLog.risk_level || 'Low',
+          lastRisk: `${textStatus} RISK (${finalRiskPercent}%)`, // Tampilan string kombinasi persentase pesanan Anda
+          lastRiskLabel: textStatus,
           lastLog: latestLog,
         });
       } else {
@@ -174,6 +192,7 @@ export default function DashboardPage() {
           totalScreening: '0 Kali',
           lastBmi: '- BMI',
           lastRisk: 'Belum Ada',
+          lastRiskLabel: 'LOW',
           lastLog: null,
         });
       }
@@ -187,7 +206,6 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      // Pengecekan berlapis untuk menampilkan nama profil real-time
       const storedName = localStorage.getItem('userName');
       const storedUser = localStorage.getItem('user');
       
@@ -205,9 +223,9 @@ export default function DashboardPage() {
     fetchHealthRecords();
   }, []);
 
-  const getRiskStyles = (risk: string) => {
-    const normRisk = risk.toLowerCase();
-    if (normRisk.includes('tinggi') || normRisk === 'danger' || normRisk === 'high') {
+  const getRiskStyles = (riskLabel: string) => {
+    const normLabel = riskLabel.toLowerCase();
+    if (normLabel.includes('high')) {
       return {
         bg: 'bg-rose-500',         
         text: 'text-rose-600',
@@ -216,7 +234,7 @@ export default function DashboardPage() {
         icon: ShieldAlert
       };
     }
-    if (normRisk.includes('sedang') || normRisk === 'warning' || normRisk === 'medium' || normRisk.includes('ringan')) {
+    if (normLabel.includes('medium')) {
       return {
         bg: 'bg-orange-500',       
         text: 'text-orange-600',
@@ -234,14 +252,13 @@ export default function DashboardPage() {
     };
   };
 
-  const currentRiskStyle = getRiskStyles(screeningData.lastRisk);
+  // Gunakan state label terpisah khusus untuk deteksi style CSS
+  const currentRiskStyle = getRiskStyles(screeningData.lastRiskLabel);
   const StatusIcon = currentRiskStyle.icon;
 
   const chartData = historyData.map(({ date, bmi, prediction, diabetesRisk }) => {
-    let riskPercent = 15; 
-    
+    let riskPercent = 0; 
     if (diabetesRisk !== undefined && diabetesRisk !== null) {
-      // Mengubah nilai probabilitas desimal backend (0-1) ke persentase (0-100%)
       riskPercent = diabetesRisk <= 1 ? Math.round(diabetesRisk * 100) : diabetesRisk;
     } else {
       const normPred = prediction.toLowerCase();
@@ -287,7 +304,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Error Message Box */}
+            {/* Error Box */}
             {errorMessage && (
               <div className="rounded-[2rem] border-2 border-rose-100 bg-rose-50/50 p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
                 <div className="flex items-center gap-4 text-center sm:text-left flex-col sm:flex-row">
@@ -315,7 +332,7 @@ export default function DashboardPage() {
               <StatCard title="Indeks Massa Tubuh" value={screeningData.lastBmi} desc="Hasil BMI terbaru yang dihitung dari entri berat dan tinggi badan terakhir." icon={User} iconBg="bg-indigo-600" gradientBg="from-indigo-50/40 to-white" />
               <StatCard 
                 title="Status Risiko AI" 
-                value={screeningData.lastRisk} 
+                value={screeningData.lastRisk} // Menampilkan teks interaktif (ex: HIGH RISK (85%))
                 desc="Kategori risiko terakhir yang dipetakan dinamis sesuai kriteria medis." 
                 icon={Zap} 
                 iconBg={currentRiskStyle.bg} 
@@ -404,9 +421,8 @@ export default function DashboardPage() {
               )}
             </div>
 
-            {/* Log Activity & Quick Access */}
+            {/* Log Activity */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-              
               <div className="lg:col-span-2 rounded-[2.5rem] bg-white border border-slate-200/60 p-8 shadow-sm space-y-6">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Activity Logs</p>
@@ -421,9 +437,9 @@ export default function DashboardPage() {
                         <StatusIcon size={16} />
                       </div>
                       <div>
-                        <p className="text-xs font-bold text-slate-800">Melakukan Cek Kesehatan Mandiri ({screeningData.lastLog.id})</p>
+                        <p className="text-xs font-bold text-slate-800">Melakukan Cek Kesehatan Mandiri ({screeningData.lastLog.id.substring(0, 8).toUpperCase()})</p>
                         <p className="text-[11px] text-slate-500 font-medium mt-1">
-                          Sistem berhasil memprediksi parameter fisik dengan kesimpulan <span className={`font-bold ${currentRiskStyle.text}`}>{screeningData.lastLog.prediction}</span>.
+                          Sistem berhasil memprediksi parameter fisik dengan kesimpulan status <span className={`font-black ${currentRiskStyle.text}`}>{screeningData.lastRiskLabel} RISK</span>.
                         </p>
                         <span className="inline-block text-[9px] font-black text-blue-600 bg-blue-50/80 px-2 py-0.5 rounded mt-2">
                           {new Date(screeningData.lastLog.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
