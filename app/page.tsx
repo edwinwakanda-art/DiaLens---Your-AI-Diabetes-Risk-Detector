@@ -30,17 +30,17 @@ interface LandingPageProps {
 const featureList = [
   {
     title: "Analisis Risiko Diabetes",
-    description: "Prediksi risiko diabetes berbasis AI dengan penjelasan ringkas agar dokter dapat mengambil tindakan selanjutnya dengan cepat.",
+    description: "Estimasi risiko diabetes berbasis AI dengan penjelasan ringkas, membantu dokter memahami profil risiko pasien dan menentukan langkah pemeriksaan lanjutan yang tepat.",
     icon: Activity,
   },
   {
     title: "Proses Skrining Terintegrasi",
-    description: "Dukungan proses pemeriksaan end-to-end mulai dari input data sampai riwayat hasil, tanpa perlu pindah aplikasi.",
+    description: "Dukungan proses pemeeriksaan end-to-end mulai dari input data sampai riwayat hasil, tanpa perlu pindah aplikasi.",
     icon: Sparkles,
   },
   {
     title: "Privasi dan Keamanan",
-    description: "Rancangan sistem mempertahankan kerahasiaan data pasien dan mempermudah kepatuhan regulasi klinis.",
+    description: "Dirancang dengan prinsip privasi sejak awal, data pasien dikelola secara aman untuk mendukung kepercayaan dalam lingkungan klinis.",
     icon: ShieldCheck,
   },
 ];
@@ -223,7 +223,7 @@ export default function LandingPage({ onStartScreening }: LandingPageProps) {
           </h1>
 
           <p className="text-slate-500 text-base md:text-lg font-medium leading-relaxed max-w-2xl">
-            DiaLens mengubah citra medis kompleks menjadi wawasan diagnostik yang jelas dan dapat ditindaklanjuti. Platform kami menggunakan state-of-the-art neural networks untuk memberikan asesmen risiko instan.
+           DiaLens AI berfungsi sebagai instrumen skrining risiko awal, bukan pengganti diagnosis medis profesional. Persentase risiko bersifat estimasi analitis dan wajib diverifikasi oleh tenaga kesehatan berkualifikasi sebelum diambil keputusan medis. Segera hubungi dokter jika Anda merasakan gejala klinis.
           </p>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 pt-4">
@@ -255,11 +255,11 @@ export default function LandingPage({ onStartScreening }: LandingPageProps) {
                 <p className="text-xs font-semibold text-gray-900 leading-tight">Keyakinan AI</p>
                 <p className="text-[10px] text-gray-400 font-medium leading-none">Pola Diagnostik Dikenali</p>
                 <div className="flex items-baseline space-x-1.5 pt-2">
-                  <span className="text-2xl font-bold font-sans text-blue-600 select-none">99.4</span>
+                  <span className="text-2xl font-bold font-sans text-blue-600 select-none">74.4</span>
                   <span className="text-xs font-semibold text-blue-400">%</span>
                 </div>
                 <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden mt-1 max-w-[10rem]">
-                  <div className="h-full bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full" style={{ width: '99.4%' }}></div>
+                  <div className="h-full bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full" style={{ width: '74.4%' }}></div>
                 </div>
               </div>
             </div>
@@ -271,19 +271,11 @@ export default function LandingPage({ onStartScreening }: LandingPageProps) {
       <section className="bg-white border-y border-slate-100 py-12 px-6 relative z-10">
         <div className="max-w-7xl mx-auto flex flex-wrap justify-around gap-8 text-center">
           <div className="space-y-0.5">
-            <h3 className="text-3xl font-black text-slate-900">500+</h3>
-            <p className="text-xs font-mono font-bold text-slate-400 uppercase tracking-widest">Klinik Aktif di Seluruh Dunia</p>
-          </div>
-          <div className="space-y-0.5">
-            <h3 className="text-3xl font-black text-slate-900">1.2M+</h3>
-            <p className="text-xs font-mono font-bold text-slate-400 uppercase tracking-widest">Citra Retina Dianalisis</p>
-          </div>
-          <div className="space-y-0.5">
-            <h3 className="text-3xl font-black bg-gradient-to-r from-blue-600 to-teal-600 bg-clip-text text-transparent">99.4%</h3>
+            <h3 className="text-3xl font-black bg-gradient-to-r from-blue-600 to-teal-600 bg-clip-text text-transparent">74.4%</h3>
             <p className="text-xs font-mono font-bold text-slate-400 uppercase tracking-widest">Akurasi Target AI</p>
           </div>
           <div className="space-y-0.5">
-            <h3 className="text-3xl font-black text-slate-900">&lt;5s</h3>
+            <h3 className="text-3xl font-black text-slate-900">&lt;30s</h3>
             <p className="text-xs font-mono font-bold text-slate-400 uppercase tracking-widest">Waktu Respon Inferensi</p>
           </div>
         </div>
@@ -425,59 +417,6 @@ export default function LandingPage({ onStartScreening }: LandingPageProps) {
       </section>
 
       {/* FEATURES SECTION */}
-      <section className="bg-white max-w-7xl mx-auto px-6 py-24 md:py-32 space-y-16 relative z-10">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-4 border-b border-gray-100">
-          <div className="space-y-3 max-w-2xl">
-            <h2 className="text-3xl md:text-4xl font-black tracking-tight text-slate-900">
-              Pergeseran Paradigma dalam Presisi Diagnostik
-            </h2>
-            <p className="text-slate-500 text-sm md:text-base leading-relaxed">
-              Dirancang oleh tenaga klinis, untuk tenaga klinis. DiaLens terintegrasi mulus ke alur kerja klinis Anda untuk memperkuat persepsi visual dengan pemetaan neural mutakhir.
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="bg-[#F4F8FF] border border-blue-100/50 p-8 rounded-3xl shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between group h-80 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-blue-600/5 blur-xl pointer-events-none group-hover:bg-blue-600/10 transition-colors"></div>
-            <div className="w-12 h-12 rounded-2xl bg-blue-100/50 flex items-center justify-center shrink-0 text-blue-600 group-hover:scale-105 transition-transform duration-300">
-              <Eye className="w-6 h-6" />
-            </div>
-            <div className="space-y-3 mt-12 z-10">
-              <h3 className="text-lg font-black text-slate-900 font-sans group-hover:text-blue-600 transition-colors">Analisis Spektral</h3>
-              <p className="text-slate-500 text-sm leading-relaxed font-medium">
-                Filter citra canggih yang mengungkap patologi mikro-vaskular bawah permukaan yang tidak terlihat oleh mata.
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-[#F4F8FF] border border-teal-100/50 p-8 rounded-3xl shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between group h-80 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-teal-500/5 blur-xl pointer-events-none group-hover:bg-teal-500/10 transition-colors"></div>
-            <div className="w-12 h-12 rounded-2xl bg-teal-50 flex items-center justify-center shrink-0 text-teal-600 group-hover:scale-105 transition-transform duration-300">
-              <Cpu className="w-6 h-6" />
-            </div>
-            <div className="space-y-3 mt-12 z-10">
-              <h3 className="text-lg font-black text-slate-900 font-sans group-hover:text-teal-600 transition-colors">Kurasi Neural</h3>
-              <p className="text-slate-500 text-sm leading-relaxed font-medium">
-                Mesin neural kami menyejajarkan ribuan data klinis diabetes historis secara instan untuk memprioritaskan temuan fokus kritis.
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-[#F4F8FF] border border-orange-100/50 p-8 rounded-3xl shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between group h-80 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-orange-500/5 blur-xl pointer-events-none group-hover:bg-orange-500/10 transition-colors"></div>
-            <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center shrink-0 text-orange-600 group-hover:scale-105 transition-transform duration-300">
-              <Clock className="w-6 h-6" />
-            </div>
-            <div className="space-y-3 mt-12 z-10">
-              <h3 className="text-lg font-black text-slate-900 font-sans group-hover:text-orange-600 transition-colors">Alur Tanpa Hambatan</h3>
-              <p className="text-slate-500 text-sm leading-relaxed font-medium">
-                Terintegrasi langsung ke platform EHR utama untuk menjaga rekam medis pasien tetap diperbarui dengan jalur skrining real-time.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
 
       <section className="bg-slate-50/60 py-24 px-4 relative z-10">
         <div className="max-w-5xl mx-auto space-y-10 text-center">
@@ -592,10 +531,10 @@ export default function LandingPage({ onStartScreening }: LandingPageProps) {
             <div className="max-w-3xl">
               <p className="text-xs uppercase tracking-[0.3em] text-blue-300 font-black">Misi kami</p>
               <h2 className="mt-4 text-3xl md:text-4xl font-black tracking-tight">
-                Membangun sistem AI yang dapat dipercaya untuk deteksi dini diabetes.
+                Membangun alat skrining risiko diabetes berbasis AI yang dapat dipercaya dan mudah digunakan.
               </h2>
               <p className="mt-6 text-sm md:text-base leading-relaxed text-slate-200">
-                Dengan fokus pada keamanan data, kemudahan penggunaan, dan hasil yang dapat ditindaklanjuti, DiaLens mendukung tenaga kesehatan menangani risiko diabetes lebih cepat dan lebih akurat.
+                DiaLens dirancang untuk membantu tenaga kesehatan mengidentifikasi individu berisiko tinggi lebih awalm sehingga intervensi dapat dilakukan sebelum kondisi berkembang lebih lanjut. Kami berkomitmen pada transparansi hasil, kemudahan integrasi ke alur kerja klinis, dan perlindungan data pengguna.
               </p>
             </div>
           </motion.section>
@@ -633,27 +572,6 @@ export default function LandingPage({ onStartScreening }: LandingPageProps) {
         </div>
       </section>
 
-      {/* SOLID BLUE ACTION CTA */}
-      <section className="bg-gradient-to-br from-blue-600 to-indigo-700 max-w-7xl mx-auto rounded-[2.5rem] p-12 md:p-20 text-center text-white relative overflow-hidden shadow-2xl mb-12 z-10" id="action-cta-card">
-        <div className="absolute inset-0 opacity-15 bg-[radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.4),transparent)]"></div>
-        
-        <div className="relative z-10 max-w-2xl mx-auto space-y-8">
-          <h2 className="text-4xl md:text-5xl font-black tracking-tight leading-tight">
-            Siap meningkatkan kemampuan diagnostik Anda?
-          </h2>
-          <p className="text-blue-100 text-sm md:text-base font-medium leading-relaxed">
-            Bergabunglah dengan lebih dari 500+ klinik dan institusi medis terkemuka di seluruh dunia yang menggunakan DiaLens untuk pengambilan keputusan mikro-vaskular diabetik real-time yang ditingkatkan.
-          </p>
-          <button
-            onClick={(e) => handleSmoothScroll(e, 'screening')}
-            className="bg-white text-blue-700 px-8 py-4 rounded-2xl font-black shadow-xl hover:shadow-2xl hover:bg-slate-50 transition-all outline-none inline-flex items-center space-x-2.5 cursor-pointer hover:scale-[1.02]"
-          >
-            <span>Mulai Skrining Pertama Anda</span>
-            <ArrowRight className="w-5 h-5 text-blue-600" />
-          </button>
-        </div>
-      </section>
-
       {/* CLINICAL MEDICAL DISCLAIMER */}
       <section className="max-w-7xl mx-auto px-6 mb-24 relative z-10">
         <div className="bg-white rounded-2xl p-6 md:p-8 flex items-start space-x-4 border border-slate-200/50 shadow-sm">
@@ -668,43 +586,14 @@ export default function LandingPage({ onStartScreening }: LandingPageProps) {
       </section>
 
       {/* FOOTER */}
-      <footer className="bg-slate-900 text-slate-400 py-16 px-6 border-t border-slate-800 relative z-10">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-12">
-          <div className="md:col-span-5 space-y-4">
-            <div className="flex items-center gap-2.5">
-              <Image src="/Logo%20Dialens%20AI.png" alt="DiaLens AI" height={2} width={2} className="rounded-md shadow-sm" />
-              <span className="font-black text-white text-lg tracking-tight">DiaLens AI</span>
-            </div>
-            <p className="text-sm tracking-wide font-medium max-w-sm leading-relaxed text-slate-500">
-              Redefining the standard of clinical retina diagnostics through curated AI models, designed specifically for secure and intuitive clinical workflows.
-            </p>
-          </div>
+      <footer className="bg-slate-800 text-slate-100 py-16 px-6 border-t border-slate-890 relative z-10">
 
-          <div className="md:col-span-3.5 space-y-4">
-            <h5 className="text-xs font-black text-white uppercase tracking-widest">Sumber Daya</h5>
-            <ul className="space-y-2.5 text-sm font-medium">
-              <li><a href="#" className="hover:text-blue-400 transition-colors flex items-center space-x-1.5"><FileText className="w-3.5 h-3.5" /><span>Makalah Putih</span></a></li>
-              <li><a href="#" className="hover:text-blue-400 transition-colors flex items-center space-x-1.5"><BookOpen className="w-3.5 h-3.5" /><span>Studi Klinis</span></a></li>
-              <li><a href="#" className="hover:text-blue-400 transition-colors flex items-center space-x-1.5"><Settings className="w-3.5 h-3.5" /><span>Panduan Integrasi</span></a></li>
-            </ul>
-          </div>
-
-          <div className="md:col-span-3.5 space-y-4">
-            <h5 className="text-xs font-black text-white uppercase tracking-widest">Perusahaan</h5>
-            <ul className="space-y-2.5 text-sm font-medium">
-              <li><Link href="/about" className="hover:text-blue-400 transition-colors">Tentang DiaLens</Link></li>
-              <li><a href="#" className="hover:text-blue-400 transition-colors">Etika Privasi & HIPAA</a></li>
-              <li><a href="#" className="hover:text-blue-400 transition-colors">Hubungi Dukungan</a></li>
-            </ul>
-          </div>
-        </div>
-
-        <div className="max-w-7xl mx-auto border-t border-slate-800 mt-12 pt-6 flex flex-col md:flex-row items-center justify-between text-xs font-medium">
+        <div className="max-w-7xl mx-auto border-t border-slate-800 mt-0 pt-2 flex flex-col md:flex-row items-center justify-between text-xs font-medium">
           <span>&copy; {new Date().getFullYear()} DiaLens AI Clinical Curator. All rights reserved.</span>
           <div className="flex space-x-6 mt-4 md:mt-0">
-            <a href="#" className="hover:text-white transition-colors">Syarat Layanan</a>
-            <a href="#" className="hover:text-white transition-colors">Kebijakan Privasi</a>
-            <a href="#" className="hover:text-white transition-colors">Kepatuhan FDA</a>
+            <a href="#" className="hover:text-white transition-colors">HOME</a>
+            <a href="#" className="hover:text-white transition-colors">DEMO</a>
+            <a href="#" className="hover:text-white transition-colors">ABOUT</a>
           </div>
         </div>
       </footer>
