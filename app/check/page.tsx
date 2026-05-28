@@ -128,7 +128,7 @@ export default function CheckPage() {
     setErrorMessage(null);
     setResult(null);
 
-    // MURNI KANTONG 9 DATA (TIDAK DITAMBAHKAN VARIABEL APAPUN AGAR API TIDAK ERROR)
+    // ✨ MURNI 9 DATA (TIDAK DITAMBAHKAN VARIABEL APAPUN AGAR SINKRON DENGAN API)
     const payload = {
       Age: parseInt(ageGroup),
       BMI: parseFloat(bmi) || 22.0,
@@ -152,7 +152,7 @@ export default function CheckPage() {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
-          // ✨ AMAN: Kirim BB dan TB lewat Header HTTP terpisah
+          // ✨ DATA BB DAN TB AMAN DIKIRIM DI LUAR PAYLOAD UTAMA
           'X-User-Weight': weightKg || "-",
           'X-User-Height': heightCm || "-"
         },
@@ -180,11 +180,16 @@ export default function CheckPage() {
         ? (rawData.probability <= 1 ? Math.round(rawData.probability * 100) : Math.round(rawData.probability))
         : 0;
 
+      // ==========================================================
+      // 🔥 FIX SINKRONISASI REKOMENDASI (SNAKE_CASE & CAMELCASE)
+      // ==========================================================
+      const recommendationText = rawData.ai_recommendation || rawData.aiRecommendation || 'Tetap jaga pola makan sehat, batasi konsumsi gula berlebih, dan lakukan aktivitas fisik secara teratur.';
+
       setResult({
         prediction: prediksiIndo,
         probability: probValue,
         riskLevel: tingkatRisikoIndo,
-        aiRecommendation: rawData.ai_recommendation || rawData.aiRecommendation || 'Tetap jaga pola makan sehat, batasi konsumsi gula berlebih, dan lakukan aktivitas fisik secara teratur.'
+        aiRecommendation: recommendationText // Ditangkap dengan sempurna
       });
 
     } catch (err: any) {
@@ -254,14 +259,14 @@ export default function CheckPage() {
 
                 <FormCard label="Tinggi Badan" alias="Antropometri" icon={Scale} iconBg="bg-indigo-600" gradientBg="from-indigo-50/40 to-white">
                   <div className="relative flex items-center">
-                    <input type="number" required placeholder="Contoh: 170" value={heightCm} onChange={(e) => setHeightCm(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 pr-10 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all" />
+                    <input type="number" required placeholder="Contoh: 165" value={heightCm} onChange={(e) => setHeightCm(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 pr-10 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all" />
                     <span className="absolute right-3 text-[10px] font-black text-slate-400 uppercase">cm</span>
                   </div>
                 </FormCard>
 
                 <FormCard label="Berat Badan" alias="Massa Tubuh" icon={Scale} iconBg="bg-blue-600" gradientBg="from-blue-50/40 to-white">
                   <div className="relative flex items-center">
-                    <input type="number" required placeholder="Contoh: 68" value={weightKg} onChange={(e) => setWeightKg(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 pr-10 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all" />
+                    <input type="number" required placeholder="Contoh: 86" value={weightKg} onChange={(e) => setWeightKg(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 pr-10 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all" />
                     <span className="absolute right-3 text-[10px] font-black text-slate-400 uppercase">kg</span>
                   </div>
                 </FormCard>
@@ -374,10 +379,38 @@ export default function CheckPage() {
                       </p>
                     </div>
                   </div>
+
+                  {/* ==========================================================
+                      ✨ AREA REKOMENDASI YANG SEKARANG SUDAH MUNCUL KEMBALI
+                     ========================================================== */}
+                  <div className="rounded-[2.5rem] bg-white border border-slate-200 p-6 md:p-8 shadow-sm space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-blue-600 text-white rounded-xl shadow-md">
+                        <Sparkles size={16} />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">AI Medical Advice</p>
+                        <h3 className="text-lg font-black text-slate-900 tracking-tight">Rekomendasi Klinis Terpersonalisasi</h3>
+                      </div>
+                    </div>
+
+                    <div className="text-xs md:text-sm text-slate-700 font-medium leading-relaxed bg-slate-50/80 rounded-2xl p-6 border border-slate-100 whitespace-pre-line shadow-inner">
+                      {formatRecommendationText(result.aiRecommendation)}
+                    </div>
+                  </div>
+
                 </div>
               ) : (
                 <div className="rounded-[2.5rem] bg-white border border-slate-200/60 p-8 shadow-sm text-center">
-                  <h4 className="text-sm font-bold text-slate-800">Menunggu Inisiasi Skrining</h4>
+                  <div className="max-w-md mx-auto py-6 space-y-3">
+                    <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto border border-slate-100 text-slate-400">
+                      <Info size={20} />
+                    </div>
+                    <h4 className="text-sm font-bold text-slate-800">Menunggu Inisiasi Skrining</h4>
+                    <p className="text-xs text-slate-400 font-medium leading-relaxed">
+                      Silakan isi semua parameter bento grid di atas terlebih dahulu, kemudian klik tombol <strong>Mulai Analisis AI Sekarang</strong> untuk memunculkan ringkasan prediksi risiko beserta instruksi klinis dari server secara lengkap di area ini.
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
