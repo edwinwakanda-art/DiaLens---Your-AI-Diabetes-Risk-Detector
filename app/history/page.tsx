@@ -133,8 +133,9 @@ export default function HistoryPage() {
         const hasHighBP = log.HighBP === 1 || log.HighBP === '1' || log.highBP === 'Ya' || log.highBP === '1' || log.highBP === 1;
         const hasHighChol = log.HighChol === 1 || log.HighChol === '1' || log.highChol === 'Ya' || log.highChol === '1' || log.highChol === 1;
 
-        const cleanWeight = String(log.weight ?? log.Weight ?? '-');
-        const cleanHeight = String(log.height ?? log.Height ?? '-');
+        // Pertahankan string asli apa adanya dari database
+        const cleanWeight = String(log.weight ?? '-');
+        const cleanHeight = String(log.height ?? '-');
 
         return {
           id: log.id || log._id || 'DL-Log',
@@ -387,7 +388,7 @@ export default function HistoryPage() {
       </div>
 
       {/* =========================================================================
-          ✨ MODAL PREVIEW DETAIL (PERBAIKAN: DINAMIS MURNI TANPA ANGKA HARDCODE)
+          ✨ MODAL PREVIEW DETAIL: REAL-TIME DAN AKURAT 100% SESUAI INPUT USER
          ========================================================================= */}
       {isModalOpen && selectedItem && (() => {
         const modalTheme = getRiskTheme(selectedItem.status);
@@ -395,9 +396,9 @@ export default function HistoryPage() {
         let parsedBMI = parseFloat(selectedItem.bmi);
         if (isNaN(parsedBMI) || parsedBMI <= 0) parsedBMI = 0;
 
-        // Tampilkan string asli dari database, buang batasan fallback default ("168" / "74")
-        let displayHeight = selectedItem.height ? selectedItem.height.trim() : '-';
-        let displayWeight = selectedItem.weight ? selectedItem.weight.trim() : '-';
+        // Ambil string mentah dari database, buang batasan fallback default ("168" / "74")
+        const displayHeight = selectedItem.height ? selectedItem.height.trim() : '-';
+        const displayWeight = selectedItem.weight ? selectedItem.weight.trim() : '-';
 
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
@@ -453,11 +454,15 @@ export default function HistoryPage() {
                       </div>
                       <div className="flex justify-between">
                         <span>Berat Badan</span>
-                        <span className="text-slate-900 font-bold">{displayWeight !== '-' ? `${displayWeight} KG` : '-'}</span>
+                        <span className="text-slate-900 font-bold">
+                          {displayWeight !== '-' ? `${displayWeight} KG` : '- KG'}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span>Tinggi Badan</span>
-                        <span className="text-slate-900 font-bold">{displayHeight !== '-' ? `${displayHeight} CM` : '-'}</span>
+                        <span className="text-slate-900 font-bold">
+                          {displayHeight !== '-' ? `${displayHeight} CM` : '- CM'}
+                        </span>
                       </div>
                       <div className="flex justify-between border-t border-blue-100 pt-2 mt-1">
                         <span className="text-blue-600 font-bold">Massa Tubuh (BMI)</span>
