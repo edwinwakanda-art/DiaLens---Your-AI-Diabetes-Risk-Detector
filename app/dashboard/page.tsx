@@ -25,7 +25,7 @@ import {
 } from 'recharts';
 import Sidebar from '../components/Sidebar';
 
-// Sanitasi BASE_URL untuk mencegah double slash atau URL rusak jika di Vercel diakhiri tanda '/'
+// Mengamankan URL dari tanda '/' di ujung variabel Vercel
 const RAW_URL = process.env.NEXT_PUBLIC_API_URL || 'https://dialens-backend-production.up.railway.app';
 const BASE_URL = RAW_URL.replace(/\/$/, '');
 
@@ -55,367 +55,405 @@ interface StatCardProps {
   valueColor?: string;
 }
 
-const StatCard: React.FC<StatCardProps> = ({ title, value, desc, icon: Icon, iconBg, gradientBg, valueColor = "text-slate-900" }) => (
-  <div className={`relative overflow-hidden rounded-[2.5rem] border border-slate-200/60 p-7 bg-gradient-to-br ${gradientBg} shadow-sm transition-all hover:shadow-md`}>
-    <div className="flex items-start justify-between">
-      <div className="space-y-2">
-        <span className="inline-block text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">User Activity</span>
-        <h3 className={`text-3xl font-black tracking-tight ${valueColor}`}>{value}</h3>
-        <div>
-          <p className="text-[11px] font-black uppercase tracking-wider text-slate-800">{title}</p>
-          <p className="text-[11px] text-slate-500 leading-relaxed mt-1">{desc}</p>
-        </div>
+const StatCard = ({ title, value, desc, icon: Icon, iconBg, gradientBg, valueColor = "text-slate-900" }: StatCardProps) => (
+  <div className={`rounded-[2rem] border border-slate-200/60 bg-gradient-to-b ${gradientBg} p-6 shadow-sm transition-all duration-300 hover:shadow-md`}>
+    <div className="flex items-center justify-between">
+      <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 bg-white/80 px-2 py-0.5 rounded-md border border-slate-100">
+        User Activity
+      </span>
+      <div className={`p-2.5 rounded-xl ${iconBg} text-white shadow-sm`}>
+        <Icon size={16} />
       </div>
-      <div className={`p-3 rounded-2xl text-white ${iconBg} shadow-sm`}>
-        <Icon size={18} strokeWidth={2.5} />
-      </div>
+    </div>
+    <div className="mt-4">
+      <h3 className={`text-2xl font-black tracking-tight ${valueColor}`}>{value}</h3>
+      <p className="text-xs font-black uppercase tracking-[0.05em] text-slate-700 mt-1">{title}</p>
+      <p className="text-[11px] text-slate-500 font-medium mt-2 leading-relaxed">{desc}</p>
     </div>
   </div>
 );
 
-export default function Dashboard() {
-  const [userName, setUserName] = useState<string>('Pengguna');
+export default function DashboardPage() {
+  const [displayName, setDisplayName] = useState('Pengguna DiaLens');
+  const [historyData, setHistoryData] = useState<MedicalLog[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  
   const [screeningData, setScreeningData] = useState<{
-    totalScreening: number;
-    latestBmi: string;
-    aiRiskStatus: string;
-    chartData: any[];
+    totalScreening: string;
+    lastBmi: string;
+    lastRisk: string;
     lastLog: MedicalLog | null;
   }>({
-    totalScreening: 0,
-    latestBmi: '- BMI',
-    aiRiskStatus: 'Belum Ada',
-    chartData: [],
-    lastLog: null
+    totalScreening: '0 Kali',
+    lastBmi: '- BMI',
+    lastRisk: 'Belum Ada',
+    lastLog: null,
   });
 
-  const [loading, setLoading] = useState<boolean>(true);
-  const [apiError, setApiError] = useState<string | null>(null);
-
   const fetchHealthRecords = async () => {
-    setLoading(true);
-    setApiError(null);
     try {
-      const token = localStorage.getItem('token');
-      const storedUser = localStorage.getItem('user');
+      setLoading(true);
+      setErrorMessage(null);
       
-      if (storedUser) {
-        const parsed = JSON.parse(storedUser);
-        if (parsed.name) setUserName(parsed.name);
-      }
-
+      const token = localStorage.getItem('token'); 
       if (!token) {
-        setApiError('Sesi login tidak ditemukan. Silakan login kembali.');
+        setErrorMessage("Token autentikasi tidak ditemukan. Silakan lakukan login ulang.");
         setLoading(false);
         return;
       }
 
-      // Pemanggilan endpoint yang sudah diperbaiki & disanitasi
       const res = await fetch(`${BASE_URL}/api/health/records`, {
         method: 'GET',
         headers: {
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
+        },
       });
 
       if (!res.ok) {
         throw new Error(`Backend merespons dengan kode kesalahan status: ${res.status}`);
       }
 
-      const result = await res.json();
-      const records = result.records || [];
+      const resJson = await res.json();
+      
+      // Mengatasi pembacaan array flat langsung dari backend controller
+      let history: any[] = [];
+      if (Array.isArray(resJson)) {
+        history = resJson;
+      } else if (resJson && typeof resJson === 'object') {
+        history = resJson.records || resJson.data || [];
+      }
 
-      if (records.length === 0) {
+      const normalizedHistory: MedicalLog[] = history.map((log: any) => {
+        // Pemetaan data yang disesuaikan dengan key flattened object dari backend
+        const finalBmi = log.bmi && log.bmi !== '-' ? String(parseFloat(log.bmi).toFixed(1)) : '-';
+        
+        // Memetakan tingkat risiko agar seragam teksnya (High / Medium / Low)
+        let riskText = log.risk_level || log.prediction || 'Low';
+        if (riskText === '1' || riskText === 1 || riskText === 'Diabetes Terdeteksi') riskText = 'High';
+        if (riskText === '0' || riskText === 0 || riskText === 'Aman / Normal') riskText = 'Low';
+
+        return {
+          id: log.id || log._id || 'DL-Log',
+          date: log.date || log.createdAt || new Date().toISOString(),
+          age: log.age || '-',
+          weight: log.weight || '-',
+          height: log.height || '-',
+          bmi: finalBmi,
+          highBP: log.highBP || 'No',
+          highChol: log.highChol || 'No',
+          prediction: riskText,
+          status: log.status || 'Safe',
+          ai_recommendation: log.ai_recommendation || 'Tidak ada rekomendasi dari AI.',
+          risk_level: riskText,
+          diabetesRisk: log.diabetesRisk !== undefined ? Number(log.diabetesRisk) : undefined
+        };
+      });
+
+      // 🎯 SINKRONISASI GRAFIK CHRONOLOGICAL (Urutan waktu maju dari kiri ke kanan)
+      const sortedForChart = [...normalizedHistory].sort(
+        (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+      );
+      setHistoryData(sortedForChart);
+
+      // 🎯 SINKRONISASI KARTU UTAMA REAL-TIME (Mengambil entri paling terbaru)
+      if (normalizedHistory.length > 0) {
+        const latestLog = [...normalizedHistory].sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+        )[0]; 
+
         setScreeningData({
-          totalScreening: 0,
-          latestBmi: '- BMI',
-          aiRiskStatus: 'Belum Ada',
-          chartData: [],
-          lastLog: null
+          totalScreening: `${normalizedHistory.length} Kali`,
+          lastBmi: latestLog.bmi !== '-' ? `${latestLog.bmi} BMI` : '- BMI',
+          lastRisk: latestLog.risk_level || 'Low',
+          lastLog: latestLog,
         });
       } else {
-        // Balik urutan agar data grafik berurutan dari medis terlama -> terbaru
-        const sortedRecordsForChart = [...records].reverse();
-        const chartDataMapped = sortedRecordsForChart.map((rec: any, idx: number) => ({
-          name: `Pemeriksaan ${idx + 1}`,
-          bmi: rec.biometrics?.bmi ? parseFloat(rec.biometrics.bmi) : 0,
-          risk: rec.results?.diabetesRisk ? parseFloat((rec.results.diabetesRisk * 100).toFixed(1)) : 0
-        }));
-
-        const latestRecord = records[0]; 
-        const rawBmi = latestRecord.biometrics?.bmi;
-        const formattedBmi = rawBmi ? `${parseFloat(rawBmi).toFixed(1)} BMI` : '- BMI';
-        const riskStatus = latestRecord.results?.riskLevel || 'Belum Ada';
-
-        const lastLogMapped: MedicalLog = {
-          id: latestRecord._id,
-          date: latestRecord.createdAt,
-          age: latestRecord.biometrics?.age || '-',
-          weight: latestRecord.biometrics?.weight || '-',
-          height: latestRecord.biometrics?.height || '-',
-          bmi: rawBmi ? parseFloat(rawBmi).toFixed(1) : '-',
-          highBP: latestRecord.clinical?.highBP || 'No',
-          highChol: latestRecord.clinical?.highChol || 'No',
-          prediction: latestRecord.results?.prediction === 1 ? 'Diabetes' : 'Non-Diabetes',
-          status: riskStatus,
-          ai_recommendation: latestRecord.results?.aiRecommendation,
-          risk_level: riskStatus,
-          diabetesRisk: latestRecord.results?.diabetesRisk
-        };
-
         setScreeningData({
-          totalScreening: records.length,
-          latestBmi: formattedBmi,
-          aiRiskStatus: riskStatus,
-          chartData: chartDataMapped,
-          lastLog: lastLogMapped
+          totalScreening: '0 Kali',
+          lastBmi: '- BMI',
+          lastRisk: 'Belum Ada',
+          lastLog: null,
         });
       }
-    } catch (err: any) {
-      console.error('❌ Error fetching health records:', err);
-      setApiError(err.message || 'Terjadi kesalahan sistem saat menghubungi server backend.');
+    } catch (error: any) {
+      console.error("Log kesalahan penarikan data API:", error);
+      setErrorMessage(error.message || "Gagal menyinkronkan database cluster grafik.");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // Pengecekan berlapis untuk menampilkan nama profil real-time
+      const storedName = localStorage.getItem('userName');
+      const storedUser = localStorage.getItem('user');
+      
+      if (storedName) {
+        setDisplayName(storedName);
+      } else if (storedUser) {
+        try {
+          const parsedUser = JSON.parse(storedUser);
+          if (parsedUser.name) setDisplayName(parsedUser.name);
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
     fetchHealthRecords();
   }, []);
 
-  const getRiskColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'low risk':
-      case 'low':
-        return 'text-emerald-600 bg-emerald-50';
-      case 'medium risk':
-      case 'medium':
-        return 'text-amber-600 bg-amber-50';
-      case 'high risk':
-      case 'high':
-        return 'text-rose-600 bg-rose-50';
-      default:
-        return 'text-emerald-600 bg-emerald-50';
+  const getRiskStyles = (risk: string) => {
+    const normRisk = risk.toLowerCase();
+    if (normRisk.includes('tinggi') || normRisk === 'danger' || normRisk === 'high') {
+      return {
+        bg: 'bg-rose-500',         
+        text: 'text-rose-600',
+        cardBg: 'from-rose-50/60 to-white',
+        border: 'border-rose-100',
+        icon: ShieldAlert
+      };
     }
+    if (normRisk.includes('sedang') || normRisk === 'warning' || normRisk === 'medium' || normRisk.includes('ringan')) {
+      return {
+        bg: 'bg-orange-500',       
+        text: 'text-orange-600',
+        cardBg: 'from-orange-50/60 to-white',
+        border: 'border-orange-100',
+        icon: AlertTriangle
+      };
+    }
+    return {
+      bg: 'bg-emerald-500',        
+      text: 'text-emerald-600',
+      cardBg: 'from-emerald-50/60 to-white',
+      border: 'border-emerald-100',
+      icon: CheckCircle2
+    };
+  };
+
+  const currentRiskStyle = getRiskStyles(screeningData.lastRisk);
+  const StatusIcon = currentRiskStyle.icon;
+
+  const chartData = historyData.map(({ date, bmi, prediction, diabetesRisk }) => {
+    let riskPercent = 15; 
+    
+    if (diabetesRisk !== undefined && diabetesRisk !== null) {
+      // Mengubah nilai probabilitas desimal backend (0-1) ke persentase (0-100%)
+      riskPercent = diabetesRisk <= 1 ? Math.round(diabetesRisk * 100) : diabetesRisk;
+    } else {
+      const normPred = prediction.toLowerCase();
+      if (normPred === 'medium') riskPercent = 45;
+      if (normPred === 'high') riskPercent = 75;
+    }
+
+    return {
+      Tanggal: new Date(date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) + 
+               ' ' + new Date(date).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+      'Indeks Massa Tubuh (BMI)': parseFloat(bmi) || 0,
+      'Tingkat Risiko AI (%)': riskPercent,
+    };
+  });
+
+  const formatRecommendationText = (text: string) => {
+    if (!text) return '';
+    return text.split('*').map((part, i) => 
+      i % 2 === 1 ? <strong key={i} className="font-extrabold text-slate-900 bg-blue-50/60 px-1 rounded">{part}</strong> : part
+    );
   };
 
   return (
-    <div className="flex min-h-screen bg-[#f8fafc]">
-      <Sidebar />
-      <main className="flex-1 p-8 overflow-y-auto max-w-[1400px] mx-auto space-y-8">
+    <div className="min-h-screen bg-[#F4F8FF] text-slate-900 font-sans selection:bg-blue-100">
+      <div className="flex">
         
-        {/* Banner Selamat Datang */}
-        <div className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 p-8 text-white shadow-xl shadow-blue-100/40">
-          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-100/80">User Dashboard</span>
-              <h1 className="text-3xl font-black tracking-tight">Selamat Datang, {userName}!</h1>
-            </div>
-            <p className="text-xs text-blue-50/90 max-w-sm font-medium leading-relaxed">
-              Ini adalah ruang pantau aktivitas kesehatan Anda. Gunakan menu navigasi untuk menguji risiko medis atau melihat riwayat pemeriksaan Anda.
-            </p>
-          </div>
-        </div>
+        <Sidebar />
 
-        {/* Panel Notifikasi Error API */}
-        {apiError && (
-          <div className="rounded-[2rem] border border-rose-200 bg-rose-50/60 p-5 shadow-sm backdrop-blur-sm animate-in fade-in slide-in-from-top-4 duration-300">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex items-start gap-4">
-                <div className="p-3 bg-rose-600 text-white rounded-2xl shadow-sm shadow-rose-200">
-                  <AlertOctagon size={20} strokeWidth={2.5} />
-                </div>
-                <div className="space-y-0.5">
-                  <h4 className="text-sm font-black text-rose-900 tracking-tight">Sinkronisasi Jalur API Terhambat</h4>
-                  <p className="text-xs text-rose-700/90 font-medium leading-relaxed">{apiError}</p>
-                </div>
-              </div>
-              <button 
-                onClick={fetchHealthRecords}
-                className="flex items-center gap-2 px-5 py-2.5 bg-rose-600 text-white font-bold text-xs rounded-xl shadow-sm shadow-rose-100 transition-all hover:bg-rose-700 active:scale-95"
-              >
-                <RefreshCw size={14} strokeWidth={2.5} className={loading ? "animate-spin" : ""} />
-                <span>Muat Ulang</span>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Baris Kartu Informasi Utama */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <StatCard
-            title="Total Skrining"
-            value={loading ? '...' : `${screeningData.totalScreening} Kali`}
-            desc="Jumlah akumulasi semua pemeriksaan Anda."
-            icon={TrendingUp}
-            iconBg="bg-blue-600"
-            gradientBg="from-blue-50/30 to-indigo-50/10"
-          />
-          <StatCard
-            title="Indeks Massa Tubuh"
-            value={loading ? '...' : screeningData.latestBmi}
-            desc="Hasil BMI terbaru yang dihitung dari entri berat dan tinggi badan terakhir."
-            icon={User}
-            iconBg="bg-indigo-600"
-            gradientBg="from-indigo-50/30 to-purple-50/10"
-          />
-          <StatCard
-            title="Status Risiko AI"
-            value={loading ? '...' : screeningData.aiRiskStatus}
-            desc="Kategori risiko terakhir yang dipetakan dinamis sesuai kriteria medis."
-            icon={Zap}
-            iconBg="bg-emerald-600"
-            gradientBg="from-emerald-50/40 to-teal-50/10"
-            valueColor={
-              screeningData.aiRiskStatus.toLowerCase().includes('high') ? 'text-rose-600' :
-              screeningData.aiRiskStatus.toLowerCase().includes('medium') ? 'text-amber-500' : 'text-emerald-600'
-            }
-          />
-        </div>
-
-        {/* Baris Konten Analitik & Log Cepat */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
-          {/* Grafik Tren Kesehatan */}
-          <div className="lg:col-span-2 rounded-[2.5rem] bg-white border border-slate-200/60 p-7 shadow-sm flex flex-col min-h-[420px]">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-              <div>
-                <span className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Data Analytics</span>
-                <h3 className="text-xl font-black text-slate-900 tracking-tight mt-0.5">Grafik Tren Kesehatan & Risiko DiaLens</h3>
-              </div>
-              <div className="flex items-center gap-4 text-[11px] font-bold text-slate-600">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-blue-600" />
-                  <span>Grafik BMI</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-rose-500" />
-                  <span>Proyeksi Risiko AI</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex-1 min-h-[300px] flex items-center justify-center relative">
-              {loading ? (
-                <p className="text-xs font-semibold text-slate-400 italic">Memuat grafik analitik...</p>
-              ) : screeningData.chartData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={screeningData.chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="colorBmi" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#2563eb" stopOpacity={0.15}/>
-                        <stop offset="95%" stopColor="#2563eb" stopOpacity={0.01}/>
-                      </linearGradient>
-                      <linearGradient id="colorRisk" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.15}/>
-                        <stop offset="95%" stopColor="#f43f5e" stopOpacity={0.01}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                    <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} fontWeight="bold" tickLine={false} axisLine={false} dy={10} />
-                    <YAxis stroke="#94a3b8" fontSize={10} fontWeight="bold" tickLine={false} axisLine={false} dx={-5} />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: '#ffffff', borderRadius: '1.25rem', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.05)', fontSize: '11px', fontWeight: 'bold' }}
-                    />
-                    <Area type="monotone" dataKey="bmi" name="BMI" stroke="#2563eb" strokeWidth={3} fillOpacity={1} fill="url(#colorBmi)" />
-                    <Area type="monotone" dataKey="risk" name="Persentase Risiko (%)" stroke="#f43f5e" strokeWidth={3} fillOpacity={1} fill="url(#colorRisk)" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              ) : (
-                <p className="text-xs font-semibold text-slate-400 italic">Belum ada rekam medis tersimpan untuk akun ini.</p>
-              )}
-            </div>
-          </div>
-
-          {/* Quick Access & Detail Ringkasan */}
-          <div className="lg:col-span-1 flex flex-col gap-6">
+        <div className="md:pl-64 pt-20 md:pt-0 w-full">
+          <main className="p-8 max-w-7xl mx-auto space-y-6">
             
-            {/* Panel Ringkasan Rekam Medis Terakhir */}
-            <div className="rounded-[2.5rem] bg-white border border-slate-200/60 p-6 shadow-sm flex-1 space-y-5">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Latest Summary</p>
-                <h3 className="text-lg font-black text-slate-900 tracking-tight">Kondisi Medis Terakhir</h3>
+            {/* Header Dashboard */}
+            <div className="rounded-[2.5rem] bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 p-8 shadow-xl shadow-blue-100/60 text-white relative overflow-hidden">
+              <div className="absolute right-0 top-0 translate-x-10 -translate-y-10 w-72 h-72 bg-white/10 rounded-full blur-3xl pointer-events-none" />
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between relative z-10">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.25em] text-blue-200">User Dashboard</p>
+                  <h1 className="mt-1 text-3xl font-black tracking-tight text-white">Selamat Datang, {displayName}!</h1>
+                </div>
+                <div className="text-blue-100 text-xs sm:text-sm max-w-xl leading-relaxed font-medium">
+                  Ini adalah ruang pantau aktivitas kesehatan Anda. Gunakan menu navigasi untuk menguji risiko medis atau melihat riwayat pemeriksaan Anda.
+                </div>
               </div>
-              
-              {loading ? (
-                <p className="text-xs font-semibold text-slate-400 italic">Memuat ringkasan data...</p>
-              ) : screeningData.lastLog ? (
-                <div className="space-y-4 animate-in fade-in duration-300">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="p-3 bg-slate-50/80 rounded-2xl border border-slate-100/50">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase">BMI Terakhir</p>
-                      <p className="text-sm font-black text-slate-800 mt-0.5">{screeningData.lastLog.bmi}</p>
-                    </div>
-                    <div className="p-3 bg-slate-50/80 rounded-2xl border border-slate-100/50">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase">Umur / BB / TB</p>
-                      <p className="text-sm font-black text-slate-800 mt-0.5">
-                        {screeningData.lastLog.age} thn / {screeningData.lastLog.weight}kg / {screeningData.lastLog.height}cm
-                      </p>
-                    </div>
-                  </div>
+            </div>
 
-                  <div className="p-4 rounded-2xl bg-slate-50/50 border border-slate-100 space-y-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-slate-500 font-bold">Kolesterol Tinggi:</span>
-                      <span className={`px-2.5 py-0.5 rounded-full font-black text-[10px] uppercase ${screeningData.lastLog.highChol.toLowerCase() === 'yes' ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'}`}>
-                        {screeningData.lastLog.highChol.toLowerCase() === 'yes' ? 'Ya' : 'Tidak'}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-slate-500 font-bold">Tekanan Darah Tinggi:</span>
-                      <span className={`px-2.5 py-0.5 rounded-full font-black text-[10px] uppercase ${screeningData.lastLog.highBP.toLowerCase() === 'yes' ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'}`}>
-                        {screeningData.lastLog.highBP.toLowerCase() === 'yes' ? 'Ya' : 'Tidak'}
-                      </span>
-                    </div>
+            {/* Error Message Box */}
+            {errorMessage && (
+              <div className="rounded-[2rem] border-2 border-rose-100 bg-rose-50/50 p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+                <div className="flex items-center gap-4 text-center sm:text-left flex-col sm:flex-row">
+                  <div className="p-3 rounded-2xl bg-rose-500 text-white shadow-md shadow-rose-200">
+                    <AlertOctagon size={24} />
                   </div>
-
-                  <div className={`p-4 rounded-2xl border flex items-start gap-3 ${getRiskColor(screeningData.lastLog.status)}`}>
-                    {screeningData.lastLog.prediction === 'Diabetes' ? (
-                      <ShieldAlert size={18} className="mt-0.5 flex-shrink-0" />
-                    ) : (
-                      <CheckCircle2 size={18} className="mt-0.5 flex-shrink-0" />
-                    )}
-                    <div className="space-y-1">
-                      <p className="text-xs font-black tracking-tight">Hasil Prediksi: {screeningData.lastLog.prediction}</p>
-                      {screeningData.lastLog.ai_recommendation && (
-                        <p className="text-[11px] font-medium leading-relaxed opacity-95 line-clamp-3">
-                          {screeningData.lastLog.ai_recommendation}
-                        </p>
-                      )}
-                      <span className="inline-block text-[9px] font-black text-blue-600 bg-blue-50/80 px-2 py-0.5 rounded mt-2">
-                        {new Date(screeningData.lastLog.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
-                      </span>
-                    </div>
+                  <div>
+                    <h4 className="text-sm font-black text-rose-900 tracking-tight">Sinkronisasi Jalur API Terhambat</h4>
+                    <p className="text-xs text-rose-700 font-medium mt-0.5 leading-relaxed max-w-2xl">{errorMessage}</p>
                   </div>
                 </div>
+                <button 
+                  onClick={fetchHealthRecords}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-md transition-all active:scale-95 shrink-0"
+                >
+                  <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+                  <span>Muat Ulang</span>
+                </button>
+              </div>
+            )}
+
+            {/* Grid Stat Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <StatCard title="Total Skrining" value={screeningData.totalScreening} desc="Jumlah akumulasi semua pemeriksaan Anda." icon={TrendingUp} iconBg="bg-blue-600" gradientBg="from-blue-50/40 to-white" />
+              <StatCard title="Indeks Massa Tubuh" value={screeningData.lastBmi} desc="Hasil BMI terbaru yang dihitung dari entri berat dan tinggi badan terakhir." icon={User} iconBg="bg-indigo-600" gradientBg="from-indigo-50/40 to-white" />
+              <StatCard 
+                title="Status Risiko AI" 
+                value={screeningData.lastRisk} 
+                desc="Kategori risiko terakhir yang dipetakan dinamis sesuai kriteria medis." 
+                icon={Zap} 
+                iconBg={currentRiskStyle.bg} 
+                gradientBg={currentRiskStyle.cardBg} 
+                valueColor={currentRiskStyle.text}
+              />
+            </div>
+
+            {/* DIAGRAM TREN */}
+            <div className="rounded-[2.5rem] bg-white border border-slate-200/60 p-6 md:p-8 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Data Analytics</p>
+                  <h3 className="text-lg font-black text-slate-900 tracking-tight">Grafik Tren Kesehatan & Risiko DiaLens</h3>
+                </div>
+                <div className="flex flex-wrap gap-4 text-xs font-bold">
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-indigo-500 inline-block" />
+                    <span className="text-slate-600">Grafik BMI</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-rose-400 inline-block" />
+                    <span className="text-slate-600">Proyeksi Risiko AI</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="w-full h-72 text-xs font-semibold">
+                {loading ? (
+                  <div className="w-full h-full flex items-center justify-center text-slate-400 italic gap-2">
+                    <RefreshCw size={14} className="animate-spin text-indigo-500" />
+                    <span>Menghubungkan kluster grafik...</span>
+                  </div>
+                ) : chartData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="colorBmi" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#6366f1" stopOpacity={0.15}/>
+                          <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                        </linearGradient>
+                        <linearGradient id="colorRisk" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.12}/>
+                          <stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                      <XAxis dataKey="Tanggal" stroke="#94a3b8" tickLine={false} />
+                      <YAxis stroke="#94a3b8" tickLine={false} domain={[0, 100]} />
+                      <Tooltip contentStyle={{ backgroundColor: '#ffffff', borderRadius: '1rem', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.05)' }} />
+                      <Area type="monotone" dataKey="Indeks Massa Tubuh (BMI)" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorBmi)" />
+                      <Area type="monotone" dataKey="Tingkat Risiko AI (%)" stroke="#f43f5e" strokeWidth={2} strokeDasharray="4 4" fillOpacity={1} fill="url(#colorRisk)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-slate-400 italic">Belum ada rekam medis tersimpan untuk akun ini.</div>
+                )}
+              </div>
+            </div>
+
+            {/* KOTAK REKOMENDASI MEDIS OTOMATIS */}
+            <div className={`rounded-[2.5rem] bg-white border ${currentRiskStyle.border} p-6 md:p-8 shadow-sm space-y-4`}>
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-xl ${currentRiskStyle.bg} text-white shadow-md`}>
+                  <Sparkles size={18} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">AI Medical Advice</p>
+                  <h3 className="text-lg font-black text-slate-900 tracking-tight">Rekomendasi Klinis Terpersonalisasi</h3>
+                </div>
+              </div>
+
+              {loading ? (
+                <div className="text-xs text-slate-400 italic p-4 bg-slate-50 rounded-xl border border-dashed flex items-center gap-2">
+                  <RefreshCw size={12} className="animate-spin text-slate-400" />
+                  <span>Mengekstrak instruksi medis...</span>
+                </div>
+              ) : screeningData.lastLog?.ai_recommendation ? (
+                <div className="text-xs md:text-sm text-slate-700 font-medium leading-relaxed bg-slate-50/80 rounded-2xl p-6 border border-slate-100 whitespace-pre-line shadow-inner">
+                  {formatRecommendationText(screeningData.lastLog.ai_recommendation)}
+                </div>
               ) : (
-                <p className="text-xs font-semibold text-slate-400 italic">Belum ada riwayat aktivitas log medis.</p>
+                <div className="text-xs text-slate-400 italic p-4 bg-slate-50 rounded-xl border border-dashed">
+                  Belum memiliki data diagnosis rekomendasi dari kluster database.
+                </div>
               )}
             </div>
 
-            {/* Quick Access Menu */}
-            <div className="rounded-[2.5rem] bg-white border border-slate-200/60 p-6 shadow-sm space-y-4">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Quick Access</p>
-                <h3 className="text-lg font-black text-slate-900 tracking-tight">Mulai Tindakan</h3>
+            {/* Log Activity & Quick Access */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+              
+              <div className="lg:col-span-2 rounded-[2.5rem] bg-white border border-slate-200/60 p-8 shadow-sm space-y-6">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Activity Logs</p>
+                  <h3 className="text-lg font-black text-slate-900 tracking-tight">Timeline Aktivitas Terbaru</h3>
+                </div>
+                <div className="space-y-4">
+                  {loading ? (
+                    <p className="text-xs font-semibold text-slate-400 italic">Menyinkronkan log...</p>
+                  ) : screeningData.lastLog ? (
+                    <div className={`flex items-start gap-4 p-4 rounded-2xl bg-gradient-to-r from-slate-50 to-white border ${currentRiskStyle.border}`}>
+                      <div className={`p-2 ${currentRiskStyle.bg} text-white rounded-xl mt-0.5 shadow-sm`}>
+                        <StatusIcon size={16} />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-800">Melakukan Cek Kesehatan Mandiri ({screeningData.lastLog.id})</p>
+                        <p className="text-[11px] text-slate-500 font-medium mt-1">
+                          Sistem berhasil memprediksi parameter fisik dengan kesimpulan <span className={`font-bold ${currentRiskStyle.text}`}>{screeningData.lastLog.prediction}</span>.
+                        </p>
+                        <span className="inline-block text-[9px] font-black text-blue-600 bg-blue-50/80 px-2 py-0.5 rounded mt-2">
+                          {new Date(screeningData.lastLog.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-xs font-semibold text-slate-400 italic">Belum ada riwayat aktivitas log medis.</p>
+                  )}
+                </div>
               </div>
-              <div className="space-y-2.5">
-                <Link href="/check" className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-bold text-xs transition-transform hover:scale-[1.02] shadow-sm shadow-blue-100">
-                  <span>Luncurkan Skrining Baru</span>
-                  <ArrowUpRight size={16} strokeWidth={2.5} />
-                </Link>
-                <Link href="/history" className="flex items-center justify-between p-4 bg-slate-50 text-slate-700 hover:bg-slate-100 rounded-2xl font-bold text-xs transition-colors border border-slate-100">
-                  <span>Lihat Seluruh Riwayat Medis</span>
-                  <ArrowUpRight size={16} strokeWidth={2.5} className="text-slate-400" />
-                </Link>
-              </div>
-            </div>
 
-          </div>
+              <div className="lg:col-span-1 rounded-[2.5rem] bg-white border border-slate-200/60 p-6 shadow-sm space-y-4">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Quick Access</p>
+                  <h3 className="text-lg font-black text-slate-900 tracking-tight">Mulai Tindakan</h3>
+                </div>
+                <div className="space-y-2.5">
+                  <Link href="/check" className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-bold text-xs transition-transform hover:scale-[1.02] shadow-sm shadow-blue-100">
+                    <span>Luncurkan Skrining Baru</span>
+                    <ArrowUpRight size={16} />
+                  </Link>
+                </div>
+              </div>
+
+            </div>
+          </main>
         </div>
 
-      </main>
+      </div>
     </div>
   );
 }
