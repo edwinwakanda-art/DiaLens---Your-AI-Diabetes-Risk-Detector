@@ -20,7 +20,6 @@ import {
 } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 
-// Mengamankan URL dari tanda '/' di ujung variabel Vercel
 const RAW_URL = process.env.NEXT_PUBLIC_API_URL || 'https://dialens-backend-production.up.railway.app';
 const BASE_URL = RAW_URL.replace(/\/$/, '');
 
@@ -33,7 +32,6 @@ interface FormCardProps {
   children: React.ReactNode;
 }
 
-// BENTO GRID FORM CARD - MEMPERTAHANKAN DESAIN ASLI KAMU
 const FormCard = ({ label, alias, icon: Icon, iconBg, gradientBg, children }: FormCardProps) => (
   <div className={`rounded-[2rem] border border-slate-200/50 bg-gradient-to-b ${gradientBg} p-5 shadow-sm transition-all duration-300 hover:shadow-md flex flex-col justify-between`}>
     <div className="space-y-3">
@@ -61,7 +59,6 @@ interface PredictionResult {
 }
 
 export default function CheckPage() {
-  // FORM STATE ASLI KAMU
   const [age, setAge] = useState('');
   const [bmi, setBmi] = useState('');
   const [highBP, setHighBP] = useState('0');
@@ -84,7 +81,6 @@ export default function CheckPage() {
   const [education, setEducation] = useState('5');
   const [income, setIncome] = useState('6');
 
-  // APP LOGIC & STATE
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [result, setResult] = useState<PredictionResult | null>(null);
@@ -95,7 +91,6 @@ export default function CheckPage() {
     setErrorMessage(null);
     setResult(null);
 
-    // Pemetaan Payload Mengikuti Parameter healthController.js Backend Kamu
     const payload = {
       Age: parseInt(age) || 30,
       BMI: parseFloat(bmi) || 22.0,
@@ -142,7 +137,6 @@ export default function CheckPage() {
       const resJson = await res.json();
       const rawData = resJson.data || resJson;
 
-      // 🎯 NORMALISASI HASIL KE BAHASA INDONESIA
       let prediksiIndo = 'Bukan Diabetes';
       if (rawData.prediction === 1 || rawData.prediction === '1' || String(rawData.risk_level).toLowerCase().includes('high')) {
         prediksiIndo = 'Terdeteksi Risiko Diabetes';
@@ -153,7 +147,6 @@ export default function CheckPage() {
       if (rLevel.includes('high') || rLevel.includes('tinggi')) tingkatRisikoIndo = 'Tinggi';
       if (rLevel.includes('medium') || rLevel.includes('sedang')) tingkatRisikoIndo = 'Sedang';
 
-      // 🎯 MENGUBAH PROBABILITAS MENJADI PERSENTASE ASLI (0-100%)
       const probValue = rawData.probability !== undefined 
         ? (rawData.probability <= 1 ? Math.round(rawData.probability * 100) : Math.round(rawData.probability))
         : 0;
@@ -216,7 +209,7 @@ export default function CheckPage() {
               </div>
             )}
 
-            {/* Form Konten (Bento Grid) */}
+            {/* Form Konten Bento Grid */}
             <form onSubmit={handlePredict} className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 
@@ -256,6 +249,20 @@ export default function CheckPage() {
                   </select>
                 </FormCard>
 
+                <FormCard label="Pernah Mengalami Stroke?" alias="Vaskular" icon={HeartPulse} iconBg="bg-blue-600" gradientBg="from-blue-50/40 to-white">
+                  <select value={stroke} onChange={(e) => setStroke(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all">
+                    <option value="0">Tidak Pernah</option>
+                    <option value="1">Ya, Pernah</option>
+                  </select>
+                </FormCard>
+
+                <FormCard label="Jantung Koroner / Serangan" alias="Kardio" icon={HeartPulse} iconBg="bg-indigo-600" gradientBg="from-indigo-50/40 to-white">
+                  <select value={heartDiseaseorAttack} onChange={(e) => setHeartDiseaseorAttack(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all">
+                    <option value="0">Tidak Ada</option>
+                    <option value="1">Ya, Ada Riwayat</option>
+                  </select>
+                </FormCard>
+
                 <FormCard label="Aktivitas Fisik / Olahraga" alias="Kebugaran" icon={Dumbbell} iconBg="bg-blue-600" gradientBg="from-blue-50/40 to-white">
                   <select value={physActivity} onChange={(e) => setPhysActivity(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all">
                     <option value="1">Rutin Beraktivitas</option>
@@ -263,10 +270,38 @@ export default function CheckPage() {
                   </select>
                 </FormCard>
 
+                <FormCard label="Konsumsi Buah Harian" alias="Nutrisi" icon={Activity} iconBg="bg-indigo-600" gradientBg="from-indigo-50/40 to-white">
+                  <select value={fruits} onChange={(e) => setFruits(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all">
+                    <option value="1">Ya, Setiap Hari</option>
+                    <option value="0">Jarang / Tidak Ada</option>
+                  </select>
+                </FormCard>
+
+                <FormCard label="Konsumsi Sayur Harian" alias="Diet" icon={Activity} iconBg="bg-blue-600" gradientBg="from-blue-50/40 to-white">
+                  <select value={veggies} onChange={(e) => setVeggies(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all">
+                    <option value="1">Ya, Setiap Hari</option>
+                    <option value="0">Jarang / Tidak Ada</option>
+                  </select>
+                </FormCard>
+
                 <FormCard label="Konsumsi Alkohol Tinggi" alias="Toksisitas" icon={Wine} iconBg="bg-indigo-600" gradientBg="from-indigo-50/40 to-white">
                   <select value={hvyAlcoholConsump} onChange={(e) => setHvyAlcoholConsump(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all">
                     <option value="0">Tidak Mengonsumsi</option>
                     <option value="1">Ya, Konsumsi Tinggi</option>
+                  </select>
+                </FormCard>
+
+                <FormCard label="Jaminan Kesehatan / Asuransi" alias="Klinis" icon={Eye} iconBg="bg-blue-600" gradientBg="from-blue-50/40 to-white">
+                  <select value={anyHealthcare} onChange={(e) => setAnyHealthcare(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all">
+                    <option value="1">Memiliki Jaminan</option>
+                    <option value="0">Tidak Ada</option>
+                  </select>
+                </FormCard>
+
+                <FormCard label="Kendala Biaya ke Dokter" alias="Finansial" icon={Eye} iconBg="bg-indigo-600" gradientBg="from-indigo-50/40 to-white">
+                  <select value={noDocbcCost} onChange={(e) => setNoDocbcCost(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all">
+                    <option value="0">Tidak Ada Kendala</option>
+                    <option value="1">Ya, Ada Kendala</option>
                   </select>
                 </FormCard>
 
@@ -280,14 +315,57 @@ export default function CheckPage() {
                   </select>
                 </FormCard>
 
+                <FormCard label="Hari Buruk Kesehatan Mental" alias="Mental" icon={Eye} iconBg="bg-indigo-600" gradientBg="from-indigo-50/40 to-white">
+                  <input type="number" min="0" max="30" placeholder="Skala 0-30 Hari" value={mentHlth} onChange={(e) => setMentHlth(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all" />
+                </FormCard>
+
+                <FormCard label="Hari Sakit Fisik (30 Hari Terakhir)" alias="Fisik" icon={Eye} iconBg="bg-blue-600" gradientBg="from-blue-50/40 to-white">
+                  <input type="number" min="0" max="30" placeholder="Skala 0-30 Hari" value={physHlth} onChange={(e) => setPhysHlth(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all" />
+                </FormCard>
+
+                <FormCard label="Kesulitan Berjalan / Tangga" alias="Mobilitas" icon={Eye} iconBg="bg-indigo-600" gradientBg="from-indigo-50/40 to-white">
+                  <select value={diffWalk} onChange={(e) => setDiffWalk(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all">
+                    <option value="0">Tidak Ada Kesulitan</option>
+                    <option value="1">Ya, Mengalami Kesulitan</option>
+                  </select>
+                </FormCard>
+
+                <FormCard label="Jenis Kelamin Biologis" alias="Gender" icon={Eye} iconBg="bg-blue-600" gradientBg="from-blue-50/40 to-white">
+                  <select value={sex} onChange={(e) => setSex(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all">
+                    <option value="1">Laki-laki</option>
+                    <option value="0">Perempuan</option>
+                  </select>
+                </FormCard>
+
+                <FormCard label="Tingkat Pendidikan Terakhir" alias="Edukasi" icon={Eye} iconBg="bg-indigo-600" gradientBg="from-indigo-50/40 to-white">
+                  <select value={education} onChange={(e) => setEducation(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all">
+                    <option value="6">Sarjana / Universitas</option>
+                    <option value="5">Diploma / Kuliah</option>
+                    <option value="4">Lulus SMA</option>
+                    <option value="3">Lulus SMP</option>
+                    <option value="2">Lulus SD</option>
+                    <option value="1">Tidak Sekolah</option>
+                  </select>
+                </FormCard>
+
+                <FormCard label="Skala Pendapatan Tahunan" alias="Ekonomi" icon={Eye} iconBg="bg-blue-600" gradientBg="from-blue-50/40 to-white">
+                  <select value={income} onChange={(e) => setIncome(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all">
+                    <option value="8">Tinggi (Maksimal)</option>
+                    <option value="6">Menengah Atas</option>
+                    <option value="4">Menengah</option>
+                    <option value="2">Menengah Bawah</option>
+                    <option value="1">Sangat Rendah</option>
+                  </select>
+                </FormCard>
+
               </div>
 
-              {/* 🎯 TOMBOL SEKARANG BERADA DI TENGAH DENGAN WARNA INTERAKTIF BIRU KONSISTEN */}
+              {/* 🎯 TOMBOL SEJALUR DI TENGAH (PROPORSI SIMETRIS) */}
               <div className="flex justify-center pt-4 w-full">
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full sm:w-80 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs py-4 px-6 rounded-2xl transition-all duration-300 shadow-md shadow-blue-100 flex items-center justify-center gap-2 disabled:opacity-50 active:scale-98"
+                  className="w-full max-w-md bg-blue-600 hover:bg-blue-700 text-white font-black text-xs py-4 px-6 rounded-2xl transition-all duration-300 shadow-md shadow-blue-100 flex items-center justify-center gap-2 disabled:opacity-50 active:scale-98"
                 >
                   {loading ? (
                     <>
@@ -309,12 +387,28 @@ export default function CheckPage() {
               {result ? (
                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                   
-                  {/* PANEL DIAGNOSIS UTAMA (BIRU KONSISTEN & BAHASA INDONESIA) */}
-                  <div className="rounded-[2.5rem] bg-white border border-blue-200 p-6 md:p-8 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-                    <div className="space-y-4">
+                  {/* CONTAINER UTAMA HASIL ANALISIS */}
+                  <div className="rounded-[2.5rem] bg-white border border-blue-200 p-6 md:p-8 shadow-sm flex flex-col gap-6">
+                    
+                    {/* 1. SEKSYEN PERSENTASE (DI ATAS) */}
+                    <div className="flex flex-col items-center justify-center p-6 bg-blue-50/40 rounded-3xl border border-blue-100/60 relative overflow-hidden w-full max-w-md mx-auto">
+                      <div className="absolute right-2 top-2 text-blue-100/50 pointer-events-none">
+                        <Percent size={60} strokeWidth={1} />
+                      </div>
+                      <p className="text-[10px] font-black uppercase tracking-wider text-blue-500">Persentase Risiko</p>
+                      <h2 className="text-5xl font-black text-blue-600 my-2 tracking-tighter">
+                        {result.probability}%
+                      </h2>
+                      <p className="text-[10px] text-blue-700 font-bold bg-white px-3 py-1 rounded-full shadow-sm border border-blue-100/70">
+                        Tingkat Kerawanan Sistemis
+                      </p>
+                    </div>
+
+                    {/* 2. SEKSYEN KESIMPULAN DIAGNOSIS (DI BAWAH PERSENTASE) */}
+                    <div className="text-center space-y-3 max-w-xl mx-auto border-t border-slate-100 pt-4 w-full">
                       <div>
                         <p className="text-[10px] font-black uppercase tracking-[0.25em] text-blue-500">Hasil Pemetaan</p>
-                        <h3 className="text-xl font-black text-slate-900 tracking-tight mt-0.5">Kesimpulan Diagnosis AI</h3>
+                        <h3 className="text-lg font-black text-slate-900 tracking-tight mt-0.5">Kesimpulan Diagnosis AI</h3>
                       </div>
 
                       <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-600 px-4 py-2 rounded-2xl border border-blue-100 font-black text-xs">
@@ -326,23 +420,9 @@ export default function CheckPage() {
                         Sistem mengklasifikasikan bahwa berdasarkan kondisi fisik Anda saat ini, Anda berada pada tingkat kategori risiko <span className="font-black text-blue-600">{result.riskLevel}</span>.
                       </p>
                     </div>
-
-                    {/* BLOK PERSENTASE WARNA BIRU INTERAKTIF */}
-                    <div className="flex flex-col items-center justify-center p-6 bg-blue-50/40 rounded-3xl border border-blue-100/60 relative overflow-hidden">
-                      <div className="absolute right-2 top-2 text-blue-100/50 pointer-events-none">
-                        <Percent size={80} strokeWidth={1} />
-                      </div>
-                      <p className="text-[10px] font-black uppercase tracking-wider text-blue-500">Persentase Risiko</p>
-                      <h2 className="text-5xl font-black text-blue-600 my-2 tracking-tighter">
-                        {result.probability}%
-                      </h2>
-                      <p className="text-[10px] text-blue-700 font-bold bg-white px-3 py-1 rounded-full shadow-sm border border-blue-100/70">
-                        Tingkat Kerawanan Sistemis
-                      </p>
-                    </div>
                   </div>
 
-                  {/* 🎯 KOTAK REKOMENDASI MEDIS OTOMATIS (DI BAWAH HASIL) */}
+                  {/* 3. KOTAK REKOMENDASI MEDIS (DI PALING BAWAH) */}
                   <div className="rounded-[2.5rem] bg-white border border-blue-200 p-6 md:p-8 shadow-sm space-y-4">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-blue-600 text-white rounded-xl shadow-md">
@@ -361,7 +441,7 @@ export default function CheckPage() {
 
                 </div>
               ) : (
-                /* KONDISI STANDBY - MEMPERTAHANKAN STRUKTUR ASLI KAMU */
+                /* KONDISI STANDBY BEFORE SUBMIT */
                 <div className="rounded-[2.5rem] bg-white border border-slate-200/60 p-8 shadow-sm text-center">
                   <div className="max-w-md mx-auto py-6 space-y-3">
                     <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto border border-slate-100 text-slate-400">
