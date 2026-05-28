@@ -37,7 +37,6 @@ interface HistoryItem {
   diabetesRisk: number; 
 }
 
-// Fungsi konversi kode angka umur menjadi rentang usia asli
 const getAgeRangeText = (ageValue: string | number) => {
   const val = String(ageValue).trim();
   switch (val) {
@@ -71,7 +70,6 @@ export default function HistoryPage() {
   
   const receiptRef = useRef<HTMLDivElement>(null);
 
-  // Fungsi fetch data dari backend
   const fetchUserHistory = async () => {
     try {
       setLoading(true);
@@ -135,7 +133,6 @@ export default function HistoryPage() {
         const hasHighBP = log.HighBP === 1 || log.HighBP === '1' || log.highBP === 'Ya' || log.highBP === '1' || log.highBP === 1;
         const hasHighChol = log.HighChol === 1 || log.HighChol === '1' || log.highChol === 'Ya' || log.highChol === '1' || log.highChol === 1;
 
-        // Memastikan penamaan key dari backend (baik huruf besar maupun kecil) tertangkap dengan benar
         const cleanWeight = String(log.weight ?? log.Weight ?? '-');
         const cleanHeight = String(log.height ?? log.Height ?? '-');
 
@@ -298,7 +295,6 @@ export default function HistoryPage() {
               />
             </div>
 
-            {/* TABEL UTAMA */}
             <div className="bg-white border border-slate-200/60 rounded-[2.5rem] shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
@@ -342,7 +338,7 @@ export default function HistoryPage() {
                             </td>
                             <td className="py-4.5 px-6 whitespace-nowrap">
                               <span className="font-extrabold px-2.5 py-1 rounded-xl text-[11px] bg-blue-50 text-blue-700 border border-blue-100">
-                                {item.bmi !== '-' ? `${item.bmi} BMI` : '22.0 BMI'}
+                                {item.bmi !== '-' ? `${item.bmi} BMI` : '24.5 BMI'}
                               </span>
                             </td>
                             <td className="py-4.5 px-6 whitespace-nowrap text-[11px] space-y-0.5">
@@ -390,30 +386,28 @@ export default function HistoryPage() {
         </div>
       </div>
 
-      {/* 🛠️ MODAL PREVIEW DETAIL YANG SUDAH DIPERBAIKI SECARA REAL-TIME */}
+      {/* 🛠️ MODAL PREVIEW DETAIL (SINKRONISASI MURNI DATA DATABASE DINAMIS) */}
       {isModalOpen && selectedItem && (() => {
         const modalTheme = getRiskTheme(selectedItem.status);
         
-        // 1. Mengamankan parsing angka BMI bawaan
         let parsedBMI = parseFloat(selectedItem.bmi);
-        if (isNaN(parsedBMI) || parsedBMI <= 0) parsedBMI = 26.2;
+        if (isNaN(parsedBMI) || parsedBMI <= 0) parsedBMI = 24.5;
 
-        // 2. AMBIL LANGSUNG DATA ASLI DARI DATABASE TANPA PAKSAAN FALLBACK INDONESIA 165/71
-        let calculatedHeight = selectedItem.height.trim();
-        let calculatedWeight = selectedItem.weight.trim();
+        let calculatedHeight = selectedItem.height ? selectedItem.height.trim() : '-';
+        let calculatedWeight = selectedItem.weight ? selectedItem.weight.trim() : '-';
 
-        // Diperbaiki: Hanya gunakan rumus cadangan / perkiraan JIKA data dari DB benar-benar kosong/corrupt
+        // Jika data dari DB strip atau kosong, berikan fallback umum Indonesia
         if (calculatedHeight === '-' || calculatedHeight === '0' || !calculatedHeight) {
-          calculatedHeight = "168"; // Disesuaikan dengan input real-time gambar Anda
+          calculatedHeight = "165"; 
+        } else {
+          calculatedHeight = String(parseInt(calculatedHeight));
         }
         
         if (calculatedWeight === '-' || calculatedWeight === '0' || !calculatedWeight) {
-          // Jika berat tidak ada, tapi tinggi ada, baru kita estimasikan pakai BMI
-          const heightInMeters = parseFloat(calculatedHeight) / 100;
-          calculatedWeight = String(Math.round(parsedBMI * (heightInMeters * heightInMeters)));
+          calculatedWeight = "70"; 
         } else {
-          // Jika data berat aslinya ada (misal "74"), pertahankan string asli tersebut!
-          calculatedWeight = String(parseInt(calculatedWeight) || 74);
+          // DIAMBIL MURNI DARI DB APA ADANYA TANPA MANIPULASI RUMUS MATEMATIKA BMI
+          calculatedWeight = String(parseInt(calculatedWeight));
         }
 
         return (
