@@ -256,20 +256,6 @@ export default function CheckPage() {
                   </select>
                 </FormCard>
 
-                <FormCard label="Pernah Mengalami Stroke?" alias="Vaskular" icon={HeartPulse} iconBg="bg-blue-600" gradientBg="from-blue-50/40 to-white">
-                  <select value={stroke} onChange={(e) => setStroke(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all">
-                    <option value="0">Tidak Pernah</option>
-                    <option value="1">Ya, Pernah</option>
-                  </select>
-                </FormCard>
-
-                <FormCard label="Jantung Koroner / Serangan" alias="Kardio" icon={HeartPulse} iconBg="bg-indigo-600" gradientBg="from-indigo-50/40 to-white">
-                  <select value={heartDiseaseorAttack} onChange={(e) => setHeartDiseaseorAttack(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all">
-                    <option value="0">Tidak Ada</option>
-                    <option value="1">Ya, Ada Riwayat</option>
-                  </select>
-                </FormCard>
-
                 <FormCard label="Aktivitas Fisik / Olahraga" alias="Kebugaran" icon={Dumbbell} iconBg="bg-blue-600" gradientBg="from-blue-50/40 to-white">
                   <select value={physActivity} onChange={(e) => setPhysActivity(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all">
                     <option value="1">Rutin Beraktivitas</option>
@@ -284,20 +270,6 @@ export default function CheckPage() {
                   </select>
                 </FormCard>
 
-                <FormCard label="Jaminan Kesehatan / Asuransi" alias="Klinis" icon={Eye} iconBg="bg-blue-600" gradientBg="from-blue-50/40 to-white">
-                  <select value={anyHealthcare} onChange={(e) => setAnyHealthcare(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all">
-                    <option value="1">Memiliki Jaminan</option>
-                    <option value="0">Tidak Ada</option>
-                  </select>
-                </FormCard>
-
-                <FormCard label="Kendala Biaya ke Dokter" alias="Finansial" icon={Eye} iconBg="bg-indigo-600" gradientBg="from-indigo-50/40 to-white">
-                  <select value={noDocbcCost} onChange={(e) => setNoDocbcCost(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all">
-                    <option value="0">Tidak Ada Kendala</option>
-                    <option value="1">Ya, Ada Kendala</option>
-                  </select>
-                </FormCard>
-
                 <FormCard label="Kondisi Kesehatan Umum" alias="Perspektif" icon={Eye} iconBg="bg-blue-600" gradientBg="from-blue-50/40 to-white">
                   <select value={genHlth} onChange={(e) => setGenHlth(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all">
                     <option value="1">Sangat Baik (Excellent)</option>
@@ -305,49 +277,6 @@ export default function CheckPage() {
                     <option value="3">Cukup Baik (Good)</option>
                     <option value="4">Kurang Baik (Fair)</option>
                     <option value="5">Buruk (Poor)</option>
-                  </select>
-                </FormCard>
-
-                <FormCard label="Hari Buruk Kesehatan Mental" alias="Mental" icon={Eye} iconBg="bg-indigo-600" gradientBg="from-indigo-50/40 to-white">
-                  <input type="number" min="0" max="30" placeholder="Skala 0-30 Hari" value={mentHlth} onChange={(e) => setMentHlth(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all" />
-                </FormCard>
-
-                <FormCard label="Hari Sakit Fisik (30 Hari Terakhir)" alias="Fisik" icon={Eye} iconBg="bg-blue-600" gradientBg="from-blue-50/40 to-white">
-                  <input type="number" min="0" max="30" placeholder="Skala 0-30 Hari" value={physHlth} onChange={(e) => setPhysHlth(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all" />
-                </FormCard>
-
-                <FormCard label="Kesulitan Berjalan / Tangga" alias="Mobilitas" icon={Eye} iconBg="bg-indigo-600" gradientBg="from-indigo-50/40 to-white">
-                  <select value={diffWalk} onChange={(e) => setDiffWalk(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all">
-                    <option value="0">Tidak Ada Kesulitan</option>
-                    <option value="1">Ya, Mengalami Kesulitan</option>
-                  </select>
-                </FormCard>
-
-                <FormCard label="Jenis Kelamin Biologis" alias="Gender" icon={Eye} iconBg="bg-blue-600" gradientBg="from-blue-50/40 to-white">
-                  <select value={sex} onChange={(e) => setSex(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all">
-                    <option value="1">Laki-laki</option>
-                    <option value="0">Perempuan</option>
-                  </select>
-                </FormCard>
-
-                <FormCard label="Tingkat Pendidikan Terakhir" alias="Edukasi" icon={Eye} iconBg="bg-indigo-600" gradientBg="from-indigo-50/40 to-white">
-                  <select value={education} onChange={(e) => setEducation(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all">
-                    <option value="6">Sarjana / Universitas</option>
-                    <option value="5">Diploma / Kuliah</option>
-                    <option value="4">Lulus SMA</option>
-                    <option value="3">Lulus SMP</option>
-                    <option value="2">Lulus SD</option>
-                    <option value="1">Tidak Sekolah</option>
-                  </select>
-                </FormCard>
-
-                <FormCard label="Skala Pendapatan Tahunan" alias="Ekonomi" icon={Eye} iconBg="bg-blue-600" gradientBg="from-blue-50/40 to-white">
-                  <select value={income} onChange={(e) => setIncome(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all">
-                    <option value="8">Tinggi (Maksimal)</option>
-                    <option value="6">Menengah Atas</option>
-                    <option value="4">Menengah</option>
-                    <option value="2">Menengah Bawah</option>
-                    <option value="1">Sangat Rendah</option>
                   </select>
                 </FormCard>
 
