@@ -130,22 +130,18 @@ export default function HistoryPage() {
           customPredictionText = 'Risiko Sedang';
         }
 
-        const hasHighBP = log.HighBP === 1 || log.HighBP === '1' || log.highBP === 'Ya' || log.highBP === '1' || log.highBP === 1;
-        const hasHighChol = log.HighChol === 1 || log.HighChol === '1' || log.highChol === 'Ya' || log.highChol === '1' || log.highChol === 1;
-
-        // Pertahankan string asli apa adanya dari database
         const cleanWeight = String(log.weight ?? '-');
         const cleanHeight = String(log.height ?? '-');
 
         return {
           id: log.id || log._id || 'DL-Log',
           date: log.date || log.createdAt || new Date().toISOString(),
-          age: String(log.Age ?? log.age ?? '1'),
+          age: String(log.age ?? '1'),
           weight: cleanWeight,
           height: cleanHeight,
-          bmi: String(log.BMI || log.bmi || '-'),
-          highBP: hasHighBP ? 'Ya' : 'Tidak',
-          highChol: hasHighChol ? 'Ya' : 'Tidak',
+          bmi: String(log.bmi || '-'),
+          highBP: log.highBP === 'Ya' || log.highBP === 'yes' ? 'Ya' : 'Tidak',
+          highChol: log.highChol === 'Ya' || log.highChol === 'yes' ? 'Ya' : 'Tidak',
           prediction: customPredictionText,
           status: calculatedStatus,
           diabetesRisk: finalRiskPercent
@@ -339,7 +335,7 @@ export default function HistoryPage() {
                             </td>
                             <td className="py-4.5 px-6 whitespace-nowrap">
                               <span className="font-extrabold px-2.5 py-1 rounded-xl text-[11px] bg-blue-50 text-blue-700 border border-blue-100">
-                                {item.bmi !== '-' ? `${item.bmi} BMI` : '- BMI'}
+                                {item.bmi !== '-' ? `${parseFloat(item.bmi).toFixed(1)} BMI` : '- BMI'}
                               </span>
                             </td>
                             <td className="py-4.5 px-6 whitespace-nowrap text-[11px] space-y-0.5">
@@ -388,7 +384,7 @@ export default function HistoryPage() {
       </div>
 
       {/* =========================================================================
-          ✨ MODAL PREVIEW DETAIL: REAL-TIME DAN AKURAT 100% SESUAI INPUT USER
+          ✨ MODAL PREVIEW DETAIL: AKURAT DAN SESUAI DATA ASLI DATABASE
          ========================================================================= */}
       {isModalOpen && selectedItem && (() => {
         const modalTheme = getRiskTheme(selectedItem.status);
@@ -396,7 +392,6 @@ export default function HistoryPage() {
         let parsedBMI = parseFloat(selectedItem.bmi);
         if (isNaN(parsedBMI) || parsedBMI <= 0) parsedBMI = 0;
 
-        // Ambil string mentah dari database, buang batasan fallback default ("168" / "74")
         const displayHeight = selectedItem.height ? selectedItem.height.trim() : '-';
         const displayWeight = selectedItem.weight ? selectedItem.weight.trim() : '-';
 
