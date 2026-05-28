@@ -338,7 +338,7 @@ export default function HistoryPage() {
                             </td>
                             <td className="py-4.5 px-6 whitespace-nowrap">
                               <span className="font-extrabold px-2.5 py-1 rounded-xl text-[11px] bg-blue-50 text-blue-700 border border-blue-100">
-                                {item.bmi !== '-' ? `${item.bmi} BMI` : '24.5 BMI'}
+                                {item.bmi !== '-' ? `${item.bmi} BMI` : '- BMI'}
                               </span>
                             </td>
                             <td className="py-4.5 px-6 whitespace-nowrap text-[11px] space-y-0.5">
@@ -386,29 +386,18 @@ export default function HistoryPage() {
         </div>
       </div>
 
-      {/* 🛠️ MODAL PREVIEW DETAIL (SINKRONISASI MURNI DATA DATABASE DINAMIS) */}
+      {/* =========================================================================
+          ✨ MODAL PREVIEW DETAIL (PERBAIKAN: DINAMIS MURNI TANPA ANGKA HARDCODE)
+         ========================================================================= */}
       {isModalOpen && selectedItem && (() => {
         const modalTheme = getRiskTheme(selectedItem.status);
         
         let parsedBMI = parseFloat(selectedItem.bmi);
-        if (isNaN(parsedBMI) || parsedBMI <= 0) parsedBMI = 24.5;
+        if (isNaN(parsedBMI) || parsedBMI <= 0) parsedBMI = 0;
 
-        let calculatedHeight = selectedItem.height ? selectedItem.height.trim() : '-';
-        let calculatedWeight = selectedItem.weight ? selectedItem.weight.trim() : '-';
-
-        // Jika data dari DB strip atau kosong, berikan fallback umum Indonesia
-        if (calculatedHeight === '-' || calculatedHeight === '0' || !calculatedHeight) {
-          calculatedHeight = "165"; 
-        } else {
-          calculatedHeight = String(parseInt(calculatedHeight));
-        }
-        
-        if (calculatedWeight === '-' || calculatedWeight === '0' || !calculatedWeight) {
-          calculatedWeight = "70"; 
-        } else {
-          // DIAMBIL MURNI DARI DB APA ADANYA TANPA MANIPULASI RUMUS MATEMATIKA BMI
-          calculatedWeight = String(parseInt(calculatedWeight));
-        }
+        // Tampilkan string asli dari database, buang batasan fallback default ("168" / "74")
+        let displayHeight = selectedItem.height ? selectedItem.height.trim() : '-';
+        let displayWeight = selectedItem.weight ? selectedItem.weight.trim() : '-';
 
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
@@ -464,15 +453,17 @@ export default function HistoryPage() {
                       </div>
                       <div className="flex justify-between">
                         <span>Berat Badan</span>
-                        <span className="text-slate-900 font-bold">{calculatedWeight} KG</span>
+                        <span className="text-slate-900 font-bold">{displayWeight !== '-' ? `${displayWeight} KG` : '-'}</span>
                       </div>
                       <div className="flex justify-between">
                         <span>Tinggi Badan</span>
-                        <span className="text-slate-900 font-bold">{calculatedHeight} CM</span>
+                        <span className="text-slate-900 font-bold">{displayHeight !== '-' ? `${displayHeight} CM` : '-'}</span>
                       </div>
                       <div className="flex justify-between border-t border-blue-100 pt-2 mt-1">
                         <span className="text-blue-600 font-bold">Massa Tubuh (BMI)</span>
-                        <span className="text-blue-600 font-black bg-blue-100/70 px-2 rounded">{parsedBMI.toFixed(1)}</span>
+                        <span className="text-blue-600 font-black bg-blue-100/70 px-2 rounded">
+                          {parsedBMI > 0 ? parsedBMI.toFixed(1) : '-'}
+                        </span>
                       </div>
                     </div>
                   </div>
