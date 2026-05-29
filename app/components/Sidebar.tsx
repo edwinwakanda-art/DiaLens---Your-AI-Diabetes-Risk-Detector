@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   ShieldCheck,
   Sparkles,
+  Hospital,
   LogOut,
   Menu,
   X
@@ -83,6 +84,7 @@ export default function Sidebar() {
             <SidebarItem href="/dashboard" icon={LayoutDashboard} label="Dashboard" active={pathname === '/dashboard'} />
             <SidebarItem href="/check" icon={Activity} label="Check Kesehatan" active={pathname === '/check'} />
             <SidebarItem href="/history" icon={ShieldCheck} label="History" active={pathname === '/history'} />
+            <SidebarItem href="/rumah-sakit" icon={Hospital} label="Rumah Sakit" active={pathname === '/rumah-sakit'} />
             <SidebarItem href="/information" icon={Sparkles} label="Information" active={pathname === '/information'} />
           </nav>
         </div>
@@ -111,6 +113,7 @@ export default function Sidebar() {
               <SidebarItem href="/dashboard" icon={LayoutDashboard} label="Dashboard" active={pathname === '/dashboard'} onClick={() => setMobileSidebarOpen(false)} />
               <SidebarItem href="/check" icon={Activity} label="Check Kesehatan" active={pathname === '/check'} onClick={() => setMobileSidebarOpen(false)} />
               <SidebarItem href="/history" icon={ShieldCheck} label="History" active={pathname === '/history'} onClick={() => setMobileSidebarOpen(false)} />
+              <SidebarItem href="/rumah-sakit" icon={Hospital} label="Rumah Sakit" active={pathname === '/rumah-sakit'} onClick={() => setMobileSidebarOpen(false)} />
               <SidebarItem href="/information" icon={Sparkles} label="Information" active={pathname === '/information'} onClick={() => setMobileSidebarOpen(false)} />
             </nav>
 
