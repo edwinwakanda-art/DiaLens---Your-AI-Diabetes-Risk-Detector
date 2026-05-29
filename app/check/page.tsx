@@ -126,9 +126,19 @@ export default function CheckPage() {
     setErrorMessage(null);
     setResult(null);
 
+    const height = Number(heightCm);
+    const weight = Number(weightKg);
+    const bmiValue = Number.parseFloat(bmi);
+
+    if (height <= 0 || weight <= 0 || !Number.isFinite(bmiValue) || bmiValue <= 0) {
+      setErrorMessage('Tinggi dan berat badan harus diisi dengan angka yang valid.');
+      setLoading(false);
+      return;
+    }
+
     const payload = {
       Age: parseInt(ageGroup),
-      BMI: parseFloat(bmi) || 22.0,
+      BMI: bmiValue,
       HighBP: parseInt(highBP),
       HighChol: parseInt(highChol),
       CholCheck: parseInt(cholCheck),
@@ -136,8 +146,8 @@ export default function CheckPage() {
       HvyAlcoholConsump: parseInt(hvyAlcoholConsump),
       PhysActivity: parseInt(physActivity),
       GenHlth: parseInt(genHlth),
-      Weight: Number(weightKg),
-      Height: Number(heightCm),
+      Weight: weight,
+      Height: height,
     };
 
     try {
@@ -255,14 +265,14 @@ export default function CheckPage() {
 
                 <FormCard label="Tinggi Badan" alias="Antropometri" icon={Scale} iconBg="bg-indigo-600" gradientBg="from-indigo-50/40 to-white">
                   <div className="relative flex items-center">
-                    <input type="number" required placeholder="Contoh: 165" value={heightCm} onChange={(e) => setHeightCm(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 pr-10 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all" />
+                    <input type="number" min="1" required placeholder="Contoh: 165" value={heightCm} onChange={(e) => setHeightCm(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 pr-10 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all" />
                     <span className="absolute right-3 text-[10px] font-black text-slate-400 uppercase">cm</span>
                   </div>
                 </FormCard>
 
                 <FormCard label="Berat Badan" alias="Massa Tubuh" icon={Scale} iconBg="bg-blue-600" gradientBg="from-blue-50/40 to-white">
                   <div className="relative flex items-center">
-                    <input type="number" required placeholder="Contoh: 86" value={weightKg} onChange={(e) => setWeightKg(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 pr-10 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all" />
+                    <input type="number" min="1" required placeholder="Contoh: 86" value={weightKg} onChange={(e) => setWeightKg(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 pr-10 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all" />
                     <span className="absolute right-3 text-[10px] font-black text-slate-400 uppercase">kg</span>
                   </div>
                 </FormCard>
