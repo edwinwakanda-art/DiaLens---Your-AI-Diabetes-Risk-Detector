@@ -270,7 +270,7 @@ export default function CheckPage() {
                   </select>
                 </FormCard>
 
-                <FormCard label="Tinggi Badan" alias="Antropometri" icon={Scale} iconBg="bg-indigo-600" gradientBg="from-indigo-50/40 to-white">
+                <FormCard label="Tinggi Badan" alias="Antropometri" icon={Scale} iconBg="bg-blue-600" gradientBg="from-blue-50/40 to-white">
                   <div className="relative flex items-center">
                     <input type="number" min="1" required placeholder="Contoh: 165" value={heightCm} onChange={(e) => setHeightCm(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 pr-10 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all" />
                     <span className="absolute right-3 text-[10px] font-black text-slate-400 uppercase">cm</span>
@@ -291,7 +291,7 @@ export default function CheckPage() {
                   </select>
                 </FormCard>
 
-                <FormCard label="Kolesterol Tinggi" alias="Lipid" icon={Droplets} iconBg="bg-indigo-600" gradientBg="from-indigo-50/40 to-white">
+                <FormCard label="Kolesterol Tinggi" alias="Lipid" icon={Droplets} iconBg="bg-blue-600" gradientBg="from-blue-50/40 to-white">
                   <select value={highChol} onChange={(e) => setHighChol(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all">
                     <option value="0">Tidak Ada / Normal</option>
                     <option value="1">Ya, Di Atas Batas</option>
@@ -305,38 +305,32 @@ export default function CheckPage() {
                   </select>
                 </FormCard>
 
-                <FormCard label="Riwayat Merokok" alias="Eksternal" icon={Cigarette} iconBg="bg-indigo-600" gradientBg="from-indigo-50/40 to-white">
+                <FormCard label="Riwayat Merokok" alias="Eksternal" icon={Cigarette} iconBg="bg-blue-600" gradientBg="from-blue-50/40 to-white">
                   <select value={smoker} onChange={(e) => setSmoker(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all">
                     <option value="0">Tidak Merokok</option>
                     <option value="1">Ya, Perokok Aktif</option>
                   </select>
                 </FormCard>
 
-                <FormCard label="Konsumsi Alkohol Berat" alias="Alkohol" icon={Wine} iconBg="bg-cyan-600" gradientBg="from-cyan-50/40 to-white">
+                <FormCard label="Konsumsi Alkohol Berat" alias="Alkohol" icon={Wine} iconBg="bg-blue-600" gradientBg="from-blue-50/40 to-white">
                   <select value={hvyAlcoholConsump} onChange={(e) => setHvyAlcoholConsump(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all">
                     <option value="0">Tidak / Dalam Batas Wajar</option>
                     <option value="1">Ya, Konsumsi Berat</option>
                   </select>
                 </FormCard>
 
-                <FormCard label="Aktivitas Fisik / Olahraga" alias="Kebugaran" icon={Dumbbell} iconBg="bg-blue-600" gradientBg="from-blue-50/40 to-white">
+                <FormCard 
+                  label="Aktivitas Fisik / Olahraga" 
+                  alias="Kebugaran" 
+                  icon={Dumbbell} 
+                  iconBg="bg-blue-600" 
+                  gradientBg="from-blue-50/40 to-white"
+                  className="sm:col-span-2 lg:col-span-2"
+                >
                   <select value={physActivity} onChange={(e) => setPhysActivity(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all">
                     <option value="1">Rutin Beraktivitas</option>
                     <option value="0">Tidak Pernah / Jarang</option>
                   </select>
-                </FormCard>
-
-                <FormCard 
-                  label="Indeks Massa Tubuh (BMI)" 
-                  alias="Kalkulasi" 
-                  icon={Activity} 
-                  iconBg="bg-indigo-600" 
-                  gradientBg="from-indigo-50/40 to-white"
-                  className="sm:col-span-2 lg:col-span-2"
-                >
-                  <div className="w-full bg-blue-50/60 border border-blue-200 text-blue-700 font-black rounded-xl p-2.5 text-center text-sm shadow-inner mt-2">
-                    {bmi} <span className="text-[10px] font-medium text-slate-500 ml-1">kg/m²</span>
-                  </div>
                 </FormCard>
 
                 <FormCard 
@@ -347,7 +341,7 @@ export default function CheckPage() {
                   gradientBg="from-blue-50/40 to-white"
                   className="sm:col-span-2 lg:col-span-2"
                 >
-                  <select value={genHlth} onChange={(e) => setGenHlth(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all mt-2">
+                  <select value={genHlth} onChange={(e) => setGenHlth(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all">
                     <option value="1">Sangat Baik (Excellent)</option>
                     <option value="2">Baik Sekali (Very Good)</option>
                     <option value="3">Cukup Baik (Good)</option>
@@ -356,9 +350,17 @@ export default function CheckPage() {
                   </select>
                 </FormCard>
 
+                {/* Elemen BMI Tanpa Ikon & Card - Bentuk Tombol Solid Memanjang Penuh */}
+                <div className="col-span-1 sm:col-span-2 lg:col-span-4 pt-2">
+                  <div className="w-full bg-blue-600 text-white font-black rounded-2xl py-4 px-6 text-center text-xs shadow-md flex items-center justify-center gap-2 uppercase tracking-wider select-none">
+                    <span>Indeks Massa Tubuh (BMI) Anda:</span>
+                    <span className="text-sm bg-white/20 px-2.5 py-0.5 rounded-lg border border-white/20">{bmi} kg/m²</span>
+                  </div>
+                </div>
+
               </div>
 
-              <div className="flex justify-center pt-4 w-full">
+              <div className="flex justify-center pt-2 w-full">
                 <button
                   type="submit"
                   disabled={loading}
