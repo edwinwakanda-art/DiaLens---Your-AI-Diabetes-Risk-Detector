@@ -18,9 +18,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
-
-const RAW_URL = process.env.NEXT_PUBLIC_API_URL || 'https://dialens-backend-production.up.railway.app';
-const BASE_URL = RAW_URL.replace(/\/$/, '');
+import { API_BASE_URL } from '../lib/api-url';
 
 interface FormCardProps {
   label: string;
@@ -128,7 +126,6 @@ export default function CheckPage() {
     setErrorMessage(null);
     setResult(null);
 
-    // ✨ MURNI 9 DATA (TIDAK DITAMBAHKAN VARIABEL APAPUN AGAR SINKRON DENGAN API)
     const payload = {
       Age: parseInt(ageGroup),
       BMI: parseFloat(bmi) || 22.0,
@@ -138,7 +135,9 @@ export default function CheckPage() {
       Smoker: parseInt(smoker),
       HvyAlcoholConsump: parseInt(hvyAlcoholConsump),
       PhysActivity: parseInt(physActivity),
-      GenHlth: parseInt(genHlth)
+      GenHlth: parseInt(genHlth),
+      Weight: Number(weightKg),
+      Height: Number(heightCm),
     };
 
     try {
@@ -147,14 +146,11 @@ export default function CheckPage() {
         throw new Error('Sesi masuk telah berakhir. Silakan lakukan login ulang.');
       }
 
-      const res = await fetch(`${BASE_URL}/api/health/predict`, {
+      const res = await fetch(`${API_BASE_URL}/api/health/predict`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
-          // ✨ DATA BB DAN TB AMAN DIKIRIM DI LUAR PAYLOAD UTAMA
-          'X-User-Weight': weightKg || "-",
-          'X-User-Height': heightCm || "-"
         },
         body: JSON.stringify(payload)
       });

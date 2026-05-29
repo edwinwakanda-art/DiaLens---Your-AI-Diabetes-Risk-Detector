@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { API_BASE_URL } from '../lib/api-url';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -32,7 +33,7 @@ export default function RegisterPage() {
 
     try {
       // Mengirimkan data pendaftaran ke URL API backend Vercel kamu
-      const response = await fetch('https://dialens-backend-production.up.railway.app/api/health/register', {
+      const response = await fetch(`${API_BASE_URL}/api/health/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
