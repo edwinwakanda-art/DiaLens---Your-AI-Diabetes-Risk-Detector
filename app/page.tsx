@@ -579,7 +579,9 @@ export default function LandingPage({ onStartScreening }: LandingPageProps) {
           <div className="space-y-2">
             <h4 className="text-sm font-black text-slate-800 tracking-tight">Pernyataan Medis</h4>
             <p className="text-xs text-slate-500 leading-relaxed font-medium">
-              DiaLens adalah alat pendukung keputusan klinis berbasis AI yang dirancang untuk membantu tenaga kesehatan terdaftar dalam mengidentifikasi pola mikro-vaskular dan anomali retina pada citra medis. **Aplikasi ini tidak dimaksudkan untuk digunakan sendiri sebagai dasar diagnosis atau pengobatan.** Persentase risiko yang dihasilkan AI merupakan hipotesis analitis dan harus diverifikasi serta dikonfirmasi oleh supervisor klinis yang berkualifikasi.
+              DiaLens adalah alat skrining risiko diabetes berbasis AI yang dirancang untuk membantu pengguna memahami potensi faktor risiko berdasarkan data yang dimasukkan. Aplikasi ini bukan alat diagnosis medis dan tidak dimaksudkan untuk menggantikan konsultasi, diagnosis, atau pengobatan oleh tenaga medis profesional.
+              Hasil dan persentase risiko yang ditampilkan merupakan estimasi analitis yang dihasilkan oleh model AI, yang memiliki keterbatasan dan mungkin tidak akurat untuk semua individu. Hasil ini wajib diinterpretasikan dan dikonfirmasi oleh dokter atau tenaga kesehatan berkualifikasi sebelum dijadikan dasar keputusan medis apapun.
+              Jika Anda mengalami gejala yang mengkhawatirkan, segera konsultasikan dengan dokter tanpa menunggu hasil skrining ini.
             </p>
           </div>
         </div>
