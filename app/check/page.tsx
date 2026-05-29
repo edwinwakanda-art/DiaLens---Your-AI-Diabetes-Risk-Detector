@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Activity,
   Calendar,
@@ -10,11 +10,11 @@ import {
   Eye,
   Dumbbell,
   Cigarette,
+  Wine,
   CheckCircle2,
   Info,
   Sparkles,
   RefreshCw,
-  Percent,
   AlertCircle
 } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
@@ -61,7 +61,6 @@ export default function CheckPage() {
   const [ageGroup, setAgeGroup] = useState('1'); 
   const [heightCm, setHeightCm] = useState('');  
   const [weightKg, setWeightKg] = useState('');  
-  const [bmi, setBmi] = useState('0');           
 
   const [highBP, setHighBP] = useState('0');
   const [highChol, setHighChol] = useState('0');
@@ -75,16 +74,16 @@ export default function CheckPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [result, setResult] = useState<PredictionResult | null>(null);
 
-  useEffect(() => {
+  const bmi = useMemo(() => {
     const heightMeters = parseFloat(heightCm) / 100;
     const weight = parseFloat(weightKg);
 
     if (heightMeters > 0 && weight > 0) {
       const calculatedBmi = weight / (heightMeters * heightMeters);
-      setBmi(calculatedBmi.toFixed(1));
-    } else {
-      setBmi('0');
+      return calculatedBmi.toFixed(1);
     }
+
+    return '0';
   }, [heightCm, weightKg]);
 
   const getRiskStyles = (riskLevel: string) => {
@@ -206,9 +205,9 @@ export default function CheckPage() {
         aiRecommendation: recommendationText
       });
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setErrorMessage(err.message || 'Terjadi gangguan eksternal saat menghubungi server AI.');
+      setErrorMessage(err instanceof Error ? err.message : 'Terjadi gangguan eksternal saat menghubungi server AI.');
     } finally {
       setLoading(false);
     }
@@ -310,6 +309,13 @@ export default function CheckPage() {
                   <select value={smoker} onChange={(e) => setSmoker(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all">
                     <option value="0">Tidak Merokok</option>
                     <option value="1">Ya, Perokok Aktif</option>
+                  </select>
+                </FormCard>
+
+                <FormCard label="Konsumsi Alkohol Berat" alias="Alkohol" icon={Wine} iconBg="bg-cyan-600" gradientBg="from-cyan-50/40 to-white">
+                  <select value={hvyAlcoholConsump} onChange={(e) => setHvyAlcoholConsump(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all">
+                    <option value="0">Tidak / Dalam Batas Wajar</option>
+                    <option value="1">Ya, Konsumsi Berat</option>
                   </select>
                 </FormCard>
 
