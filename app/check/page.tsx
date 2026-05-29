@@ -172,30 +172,36 @@ export default function CheckPage() {
       const resJson = await res.json();
       const rawData = resJson.data || resJson;
 
-      let prediksiIndo = 'Bukan Diabetes';
-      if (rawData.prediction === 1 || rawData.prediction === '1' || String(rawData.risk_level).toLowerCase().includes('high')) {
-        prediksiIndo = 'Terdeteksi Risiko Diabetes';
+      const rLevel = String(rawData.risk_level || '').toLowerCase();
+      const probability = rawData.probability !== undefined
+        ? Number(rawData.probability)
+        : 0;
+      const probabilityPercent = probability <= 1 ? probability * 100 : probability;
+
+      let tingkatRisikoIndo = 'Tidak Diketahui';
+      if (rLevel.includes('high') || rLevel.includes('tinggi') || probabilityPercent >= 70) {
+        tingkatRisikoIndo = 'Tinggi';
+      } else if (rLevel.includes('medium') || rLevel.includes('sedang') || probabilityPercent >= 35) {
+        tingkatRisikoIndo = 'Sedang';
+      } else if (rLevel.includes('low') || rLevel.includes('rendah') || probabilityPercent > 0) {
+        tingkatRisikoIndo = 'Rendah';
       }
 
-      let tingkatRisikoIndo = 'Rendah';
-      const rLevel = String(rawData.risk_level || '').toLowerCase();
-      if (rLevel.includes('high') || rLevel.includes('tinggi')) tingkatRisikoIndo = 'Tinggi';
-      if (rLevel.includes('medium') || rLevel.includes('sedang')) tingkatRisikoIndo = 'Sedang';
+      const prediksiIndo = tingkatRisikoIndo === 'Tidak Diketahui'
+        ? 'Risiko Belum Diketahui'
+        : tingkatRisikoIndo === 'Rendah'
+        ? 'Risiko Diabetes Rendah'
+        : `Terdeteksi Risiko Diabetes ${tingkatRisikoIndo}`;
 
-      const probValue = rawData.probability !== undefined 
-        ? (rawData.probability <= 1 ? Math.round(rawData.probability * 100) : Math.round(rawData.probability))
-        : 0;
+      const probValue = Math.round(probabilityPercent);
 
-      // ==========================================================
-      // 🔥 FIX SINKRONISASI REKOMENDASI (SNAKE_CASE & CAMELCASE)
-      // ==========================================================
       const recommendationText = rawData.ai_recommendation || rawData.aiRecommendation || 'Tetap jaga pola makan sehat, batasi konsumsi gula berlebih, dan lakukan aktivitas fisik secara teratur.';
 
       setResult({
         prediction: prediksiIndo,
         probability: probValue,
         riskLevel: tingkatRisikoIndo,
-        aiRecommendation: recommendationText // Ditangkap dengan sempurna
+        aiRecommendation: recommendationText
       });
 
     } catch (err: any) {
