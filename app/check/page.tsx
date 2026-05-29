@@ -380,9 +380,6 @@ export default function CheckPage() {
                     </div>
                   </div>
 
-                  {/* ==========================================================
-                      ✨ AREA REKOMENDASI YANG SEKARANG SUDAH MUNCUL KEMBALI
-                     ========================================================== */}
                   <div className="rounded-[2.5rem] bg-white border border-slate-200 p-6 md:p-8 shadow-sm space-y-4">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-blue-600 text-white rounded-xl shadow-md">
