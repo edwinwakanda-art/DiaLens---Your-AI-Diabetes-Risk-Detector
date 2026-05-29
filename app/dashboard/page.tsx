@@ -25,6 +25,7 @@ import {
 } from 'recharts';
 import Sidebar from '../components/Sidebar';
 import { API_BASE_URL } from '../lib/api-url';
+import { getApiErrorMessage } from '../lib/get-api-error-message';
 
 interface MedicalLog {
   id: string;
@@ -111,7 +112,8 @@ export default function DashboardPage() {
       });
 
       if (!res.ok) {
-        throw new Error(`Backend merespons dengan kode kesalahan status: ${res.status}`);
+        const errData = await res.json().catch(() => null);
+        throw new Error(getApiErrorMessage(errData));
       }
 
       const resJson = await res.json();

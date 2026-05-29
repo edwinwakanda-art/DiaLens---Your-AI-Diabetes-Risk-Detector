@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import { API_BASE_URL } from '../lib/api-url';
+import { getApiErrorMessage } from '../lib/get-api-error-message';
 
 interface FormCardProps {
   label: string;
@@ -166,7 +167,8 @@ export default function CheckPage() {
       });
 
       if (!res.ok) {
-        throw new Error(`Gagal memproses data. Kode status server: ${res.status}`);
+        const errData = await res.json().catch(() => null);
+        throw new Error(getApiErrorMessage(errData));
       }
 
       const resJson = await res.json();

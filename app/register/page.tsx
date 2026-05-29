@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { API_BASE_URL } from '../lib/api-url';
+import { getApiErrorMessage } from '../lib/get-api-error-message';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -45,10 +46,10 @@ export default function RegisterPage() {
         }),
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => null);
 
       if (!response.ok) {
-        throw new Error(data.message || 'Gagal mendaftar. Silakan coba lagi.');
+        throw new Error(getApiErrorMessage(data));
       }
 
       // Simpan informasi user sementara

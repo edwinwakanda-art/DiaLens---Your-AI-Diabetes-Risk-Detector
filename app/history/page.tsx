@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import { API_BASE_URL } from '../lib/api-url';
+import { getApiErrorMessage } from '../lib/get-api-error-message';
 
 interface HistoryItem {
   id: string;
@@ -88,7 +89,8 @@ export default function HistoryPage() {
       });
 
       if (!response.ok) {
-        throw new Error(`Gagal memuat data riwayat (Status: ${response.status})`);
+        const errData = await response.json().catch(() => null);
+        throw new Error(getApiErrorMessage(errData));
       }
 
       const resJson = await response.json();
