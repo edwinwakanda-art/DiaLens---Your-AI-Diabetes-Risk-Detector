@@ -1,12 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { 
   Search, 
   Calendar, 
-  Scale, 
-  AlertTriangle, 
-  CheckCircle2, 
   Eye, 
   X, 
   Download, 
@@ -14,8 +11,7 @@ import {
   Activity, 
   RefreshCw, 
   AlertOctagon, 
-  Trash2, 
-  ShieldAlert
+  Trash2
 } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import { API_BASE_URL } from '../lib/api-url';
@@ -35,7 +31,21 @@ interface HistoryItem {
   prediction: string;
   status: 'LOW' | 'MEDIUM' | 'HIGH'; 
   diabetesRisk: number; 
+  aiRecommendation: string;
 }
+
+type RawHistoryLog = Record<string, unknown>;
+
+const EMPTY_RECOMMENDATION_TEXT = 'Rencana tindak lanjut belum tersimpan pada catatan ini.';
+
+const isRecord = (value: unknown): value is RawHistoryLog => (
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+);
+
+const toDisplayString = (value: unknown, fallback = '-') => {
+  const text = String(value ?? '').trim();
+  return text || fallback;
+};
 
 const getAgeRangeText = (ageValue: string | number) => {
   const val = String(ageValue).trim();
@@ -57,6 +67,28 @@ const getAgeRangeText = (ageValue: string | number) => {
   }
 };
 
+const getRecommendationText = (log: RawHistoryLog) => {
+  return toDisplayString(
+    log.ai_recommendation ??
+      log.aiRecommendation ??
+      log.recommendation ??
+      log.recommendationText ??
+      log.plan ??
+      log.action_plan,
+    ''
+  );
+};
+
+const formatRecommendationText = (text: string) => {
+  if (!text) return EMPTY_RECOMMENDATION_TEXT;
+
+  return text.split('*').map((part, index) => (
+    index % 2 === 1
+      ? <strong key={index} className="font-extrabold text-blue-900 bg-blue-50 px-1 rounded">{part}</strong>
+      : part
+  ));
+};
+
 export default function HistoryPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [historyData, setHistoryData] = useState<HistoryItem[]>([]);
@@ -70,7 +102,7 @@ export default function HistoryPage() {
   
   const receiptRef = useRef<HTMLDivElement>(null);
 
-  const fetchUserHistory = async () => {
+  const fetchUserHistory = useCallback(async () => {
     try {
       setLoading(true);
       setErrorMessage(null);
@@ -95,23 +127,29 @@ export default function HistoryPage() {
         throw new Error(getApiErrorMessage(errData));
       }
 
-      const resJson = await response.json();
+      const resJson: unknown = await response.json();
       
-      let rawLogs: any[] = [];
+      let rawLogs: RawHistoryLog[] = [];
       if (Array.isArray(resJson)) {
-        rawLogs = resJson;
-      } else if (resJson && typeof resJson === 'object') {
-        rawLogs = resJson.records || resJson.data || [];
+        rawLogs = resJson.filter(isRecord);
+      } else if (isRecord(resJson)) {
+        const recordsSource = resJson.records ?? resJson.data;
+        rawLogs = Array.isArray(recordsSource) ? recordsSource.filter(isRecord) : [];
       }
 
       const normalizeYesNo = (value: unknown): string => {
-        return value === 1 || value === '1' || value === true || value === 'Ya' || value === 'yes'
+        const normalizedValue = String(value ?? '').trim().toLowerCase();
+        return value === 1 || value === true || ['1', 'ya', 'yes', 'true'].includes(normalizedValue)
           ? 'Ya'
           : 'Tidak';
       };
 
-      const normalizedLogs: HistoryItem[] = rawLogs.map((log: any) => {
-        let rawRisk = log.diabetesRisk ?? log.probability ?? log.risk_score ?? log.diabetes_risk ?? 0;
+      const normalizedLogs: HistoryItem[] = rawLogs.map((log) => {
+        const rawRiskValue = log.diabetesRisk ?? log.probability ?? log.risk_score ?? log.diabetes_risk ?? 0;
+        let rawRisk = Number(rawRiskValue);
+        if (!Number.isFinite(rawRisk)) {
+          rawRisk = 0;
+        }
         if (rawRisk <= 1 && rawRisk > 0) {
           rawRisk = rawRisk * 100;
         }
@@ -128,7 +166,7 @@ export default function HistoryPage() {
           customPredictionText = 'Risiko Sedang';
         }
 
-        const dbRiskLevel = String(log.risk_level || log.prediction || '').toUpperCase();
+        const dbRiskLevel = String(log.risk_level ?? log.riskLevel ?? log.prediction ?? '').toUpperCase();
         if (dbRiskLevel.includes('HIGH') || dbRiskLevel.includes('TINGGI')) {
           calculatedStatus = 'HIGH';
           customPredictionText = 'Risiko Tinggi';
@@ -137,8 +175,8 @@ export default function HistoryPage() {
           customPredictionText = 'Risiko Sedang';
         }
 
-        const cleanWeight = String(log.weight ?? '-');
-        const cleanHeight = String(log.height ?? '-');
+        const cleanWeight = toDisplayString(log.weight ?? log.Weight);
+        const cleanHeight = toDisplayString(log.height ?? log.Height);
 
         const rawBmi = log.bmi ?? log.BMI;
         const numericBmi = Number(rawBmi);
@@ -147,8 +185,8 @@ export default function HistoryPage() {
           : '-';
 
         return {
-          id: log.id || log._id || 'DL-Log',
-          date: log.date || log.createdAt || new Date().toISOString(),
+          id: toDisplayString(log.id ?? log._id, 'DL-Log'),
+          date: toDisplayString(log.date ?? log.createdAt, new Date().toISOString()),
           age: String(log.age ?? '1'),
           weight: cleanWeight,
           height: cleanHeight,
@@ -157,7 +195,8 @@ export default function HistoryPage() {
           highChol: normalizeYesNo(log.highChol ?? log.HighChol),
           prediction: customPredictionText,
           status: calculatedStatus,
-          diabetesRisk: finalRiskPercent
+          diabetesRisk: finalRiskPercent,
+          aiRecommendation: getRecommendationText(log)
         };
       });
 
@@ -166,13 +205,13 @@ export default function HistoryPage() {
       );
 
       setHistoryData(sortedLogs);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Kesalahan sinkronisasi riwayat:", error);
       setErrorMessage("Koneksi server sibuk. Silakan klik tombol Segarkan Riwayat beberapa saat lagi.");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const handleDeleteHistory = async (id: string) => {
     if (!window.confirm("Apakah Anda yakin ingin menghapus catatan riwayat medis ini secara permanen?")) {
@@ -190,7 +229,8 @@ export default function HistoryPage() {
       });
       if (!response.ok) throw new Error("Gagal menghapus.");
       setHistoryData((prevData) => prevData.filter((item) => item.id !== id));
-    } catch (error: any) {
+    } catch (error: unknown) {
+      console.error("Gagal menghapus riwayat:", error);
       alert("Gagal memproses penghapusan.");
     } finally {
       setDeletingId(null);
@@ -198,8 +238,12 @@ export default function HistoryPage() {
   };
 
   useEffect(() => {
-    fetchUserHistory();
-  }, []);
+    const timeoutId = window.setTimeout(() => {
+      void fetchUserHistory();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [fetchUserHistory]);
 
   const filteredHistory = historyData.filter(item => {
     const searchString = searchTerm.toLowerCase();
@@ -207,6 +251,7 @@ export default function HistoryPage() {
       item.id.toLowerCase().includes(searchString) ||
       item.status.toLowerCase().includes(searchString) ||
       item.prediction.toLowerCase().includes(searchString) ||
+      item.aiRecommendation.toLowerCase().includes(searchString) ||
       item.date.includes(searchString)
     );
   });
@@ -230,13 +275,27 @@ export default function HistoryPage() {
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
       const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
       const padding = 15;
       const contentWidth = pdfWidth - (padding * 2);
       const contentHeight = (canvas.height * contentWidth) / canvas.width;
+      const pageContentHeight = pdfHeight - (padding * 2);
 
       pdf.addImage(imgData, 'PNG', padding, padding, contentWidth, contentHeight);
+
+      let remainingHeight = contentHeight - pageContentHeight;
+      let imageTop = padding - pageContentHeight;
+
+      while (remainingHeight > 0) {
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', padding, imageTop, contentWidth, contentHeight);
+        remainingHeight -= pageContentHeight;
+        imageTop -= pageContentHeight;
+      }
+
       pdf.save(`DiaLens_Hasil_Medis_${selectedItem?.id || 'Log'}.pdf`);
     } catch (error) {
+      console.error("Gagal mengekspor PDF:", error);
       alert('Terjadi kesalahan saat mengekspor dokumen PDF.');
     } finally {
       setIsDownloading(false);
@@ -499,6 +558,13 @@ export default function HistoryPage() {
                     <div className={`mt-2 flex items-center gap-1.5 font-black text-sm uppercase ${modalTheme.text}`}>
                       <span>RISIKO {selectedItem.status === 'HIGH' ? 'TINGGI' : selectedItem.status === 'MEDIUM' ? 'SEDANG' : 'RENDAH'}</span>
                       <span className="text-slate-500 font-bold text-xs">({selectedItem.diabetesRisk}%)</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <h4 className="text-[10px] font-black uppercase tracking-wider text-blue-600">Rencana Tindak Lanjut</h4>
+                    <div className="bg-slate-50/80 border border-slate-100 rounded-2xl p-4 text-[11px] text-slate-700 font-medium leading-relaxed whitespace-pre-line">
+                      {formatRecommendationText(selectedItem.aiRecommendation)}
                     </div>
                   </div>
 
