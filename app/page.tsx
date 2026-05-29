@@ -255,11 +255,11 @@ export default function LandingPage({ onStartScreening }: LandingPageProps) {
                 <p className="text-xs font-semibold text-gray-900 leading-tight">Keyakinan AI</p>
                 <p className="text-[10px] text-gray-400 font-medium leading-none">Pola Diagnostik Dikenali</p>
                 <div className="flex items-baseline space-x-1.5 pt-2">
-                  <span className="text-2xl font-bold font-sans text-blue-600 select-none">74.4</span>
+                  <span className="text-2xl font-bold font-sans text-blue-600 select-none">96</span>
                   <span className="text-xs font-semibold text-blue-400">%</span>
                 </div>
                 <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden mt-1 max-w-[10rem]">
-                  <div className="h-full bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full" style={{ width: '74.4%' }}></div>
+                  <div className="h-full bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full" style={{ width: '96%' }}></div>
                 </div>
               </div>
             </div>
@@ -270,13 +270,9 @@ export default function LandingPage({ onStartScreening }: LandingPageProps) {
       {/* METRIC SECTION */}
       <section className="bg-white border-y border-slate-100 py-12 px-6 relative z-10">
         <div className="max-w-7xl mx-auto flex flex-wrap justify-around gap-8 text-center">
-          <div className="space-y-0.5">
-            <h3 className="text-3xl font-black bg-gradient-to-r from-blue-600 to-teal-600 bg-clip-text text-transparent">74.4%</h3>
-            <p className="text-xs font-mono font-bold text-slate-400 uppercase tracking-widest">Akurasi Target AI</p>
-          </div>
-          <div className="space-y-0.5">
-            <h3 className="text-3xl font-black text-slate-900">&lt;30s</h3>
-            <p className="text-xs font-mono font-bold text-slate-400 uppercase tracking-widest">Waktu Respon Inferensi</p>
+          <div className="space-y-2">
+            <h3 className="text-3xl font-black bg-gradient-to-r from-blue-600 to-teal-400 bg-clip-text text-transparent">Dari 100 orang yang benar-benar menderita diabetes, model kami berhasil mendeteksi 96 di antaranya.</h3>
+            <p className="text-xs font-mono font-bold text-slate-400 uppercase tracking-widest">-- Dia Lens AI --</p>
           </div>
         </div>
       </section>
