@@ -18,9 +18,8 @@ import {
   AlertCircle
 } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
-
-const RAW_URL = process.env.NEXT_PUBLIC_API_URL || 'https://dialens-backend-production.up.railway.app';
-const BASE_URL = RAW_URL.replace(/\/$/, '');
+import { API_BASE_URL } from '../lib/api-url';
+import { getApiErrorMessage } from '../lib/get-api-error-message';
 
 interface FormCardProps {
   label: string;
@@ -128,17 +127,28 @@ export default function CheckPage() {
     setErrorMessage(null);
     setResult(null);
 
-    // ✨ MURNI 9 DATA (TIDAK DITAMBAHKAN VARIABEL APAPUN AGAR SINKRON DENGAN API)
+    const height = Number(heightCm);
+    const weight = Number(weightKg);
+    const bmiValue = Number.parseFloat(bmi);
+
+    if (height <= 0 || weight <= 0 || !Number.isFinite(bmiValue) || bmiValue <= 0) {
+      setErrorMessage('Tinggi dan berat badan harus diisi dengan angka yang valid.');
+      setLoading(false);
+      return;
+    }
+
     const payload = {
       Age: parseInt(ageGroup),
-      BMI: parseFloat(bmi) || 22.0,
+      BMI: bmiValue,
       HighBP: parseInt(highBP),
       HighChol: parseInt(highChol),
       CholCheck: parseInt(cholCheck),
       Smoker: parseInt(smoker),
       HvyAlcoholConsump: parseInt(hvyAlcoholConsump),
       PhysActivity: parseInt(physActivity),
-      GenHlth: parseInt(genHlth)
+      GenHlth: parseInt(genHlth),
+      Weight: weight,
+      Height: height,
     };
 
     try {
@@ -147,49 +157,53 @@ export default function CheckPage() {
         throw new Error('Sesi masuk telah berakhir. Silakan lakukan login ulang.');
       }
 
-      const res = await fetch(`${BASE_URL}/api/health/predict`, {
+      const res = await fetch(`${API_BASE_URL}/api/health/predict`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
-          // ✨ DATA BB DAN TB AMAN DIKIRIM DI LUAR PAYLOAD UTAMA
-          'X-User-Weight': weightKg || "-",
-          'X-User-Height': heightCm || "-"
         },
         body: JSON.stringify(payload)
       });
 
       if (!res.ok) {
-        throw new Error(`Gagal memproses data. Kode status server: ${res.status}`);
+        const errData = await res.json().catch(() => null);
+        throw new Error(getApiErrorMessage(errData));
       }
 
       const resJson = await res.json();
       const rawData = resJson.data || resJson;
 
-      let prediksiIndo = 'Bukan Diabetes';
-      if (rawData.prediction === 1 || rawData.prediction === '1' || String(rawData.risk_level).toLowerCase().includes('high')) {
-        prediksiIndo = 'Terdeteksi Risiko Diabetes';
+      const rLevel = String(rawData.risk_level || '').toLowerCase();
+      const probability = rawData.probability !== undefined
+        ? Number(rawData.probability)
+        : 0;
+      const probabilityPercent = probability <= 1 ? probability * 100 : probability;
+
+      let tingkatRisikoIndo = 'Tidak Diketahui';
+      if (rLevel.includes('high') || rLevel.includes('tinggi') || probabilityPercent >= 70) {
+        tingkatRisikoIndo = 'Tinggi';
+      } else if (rLevel.includes('medium') || rLevel.includes('sedang') || probabilityPercent >= 35) {
+        tingkatRisikoIndo = 'Sedang';
+      } else if (rLevel.includes('low') || rLevel.includes('rendah') || probabilityPercent > 0) {
+        tingkatRisikoIndo = 'Rendah';
       }
 
-      let tingkatRisikoIndo = 'Rendah';
-      const rLevel = String(rawData.risk_level || '').toLowerCase();
-      if (rLevel.includes('high') || rLevel.includes('tinggi')) tingkatRisikoIndo = 'Tinggi';
-      if (rLevel.includes('medium') || rLevel.includes('sedang')) tingkatRisikoIndo = 'Sedang';
+      const prediksiIndo = tingkatRisikoIndo === 'Tidak Diketahui'
+        ? 'Risiko Belum Diketahui'
+        : tingkatRisikoIndo === 'Rendah'
+        ? 'Risiko Diabetes Rendah'
+        : `Terdeteksi Risiko Diabetes ${tingkatRisikoIndo}`;
 
-      const probValue = rawData.probability !== undefined 
-        ? (rawData.probability <= 1 ? Math.round(rawData.probability * 100) : Math.round(rawData.probability))
-        : 0;
+      const probValue = Math.round(probabilityPercent);
 
-      // ==========================================================
-      // 🔥 FIX SINKRONISASI REKOMENDASI (SNAKE_CASE & CAMELCASE)
-      // ==========================================================
       const recommendationText = rawData.ai_recommendation || rawData.aiRecommendation || 'Tetap jaga pola makan sehat, batasi konsumsi gula berlebih, dan lakukan aktivitas fisik secara teratur.';
 
       setResult({
         prediction: prediksiIndo,
         probability: probValue,
         riskLevel: tingkatRisikoIndo,
-        aiRecommendation: recommendationText // Ditangkap dengan sempurna
+        aiRecommendation: recommendationText
       });
 
     } catch (err: any) {
@@ -259,14 +273,14 @@ export default function CheckPage() {
 
                 <FormCard label="Tinggi Badan" alias="Antropometri" icon={Scale} iconBg="bg-indigo-600" gradientBg="from-indigo-50/40 to-white">
                   <div className="relative flex items-center">
-                    <input type="number" required placeholder="Contoh: 165" value={heightCm} onChange={(e) => setHeightCm(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 pr-10 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all" />
+                    <input type="number" min="1" required placeholder="Contoh: 165" value={heightCm} onChange={(e) => setHeightCm(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 pr-10 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all" />
                     <span className="absolute right-3 text-[10px] font-black text-slate-400 uppercase">cm</span>
                   </div>
                 </FormCard>
 
                 <FormCard label="Berat Badan" alias="Massa Tubuh" icon={Scale} iconBg="bg-blue-600" gradientBg="from-blue-50/40 to-white">
                   <div className="relative flex items-center">
-                    <input type="number" required placeholder="Contoh: 86" value={weightKg} onChange={(e) => setWeightKg(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 pr-10 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all" />
+                    <input type="number" min="1" required placeholder="Contoh: 86" value={weightKg} onChange={(e) => setWeightKg(e.target.value)} className="w-full bg-slate-50/50 border border-slate-200 rounded-xl p-2.5 pr-10 text-xs font-bold focus:outline-none focus:border-blue-500 focus:bg-white transition-all" />
                     <span className="absolute right-3 text-[10px] font-black text-slate-400 uppercase">kg</span>
                   </div>
                 </FormCard>

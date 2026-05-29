@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { API_BASE_URL } from '../lib/api-url';
+import { getApiErrorMessage } from '../lib/get-api-error-message';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -32,7 +34,7 @@ export default function RegisterPage() {
 
     try {
       // Mengirimkan data pendaftaran ke URL API backend Vercel kamu
-      const response = await fetch('https://dialens-backend-production.up.railway.app/api/health/register', {
+      const response = await fetch(`${API_BASE_URL}/api/health/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -44,10 +46,10 @@ export default function RegisterPage() {
         }),
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => null);
 
       if (!response.ok) {
-        throw new Error(data.message || 'Gagal mendaftar. Silakan coba lagi.');
+        throw new Error(getApiErrorMessage(data));
       }
 
       // Simpan informasi user sementara

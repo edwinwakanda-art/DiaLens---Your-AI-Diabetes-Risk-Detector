@@ -24,9 +24,8 @@ import {
   CartesianGrid
 } from 'recharts';
 import Sidebar from '../components/Sidebar';
-
-const RAW_URL = process.env.NEXT_PUBLIC_API_URL || 'https://dialens-backend-production.up.railway.app';
-const BASE_URL = RAW_URL.replace(/\/$/, '');
+import { API_BASE_URL } from '../lib/api-url';
+import { getApiErrorMessage } from '../lib/get-api-error-message';
 
 interface MedicalLog {
   id: string;
@@ -104,7 +103,7 @@ export default function DashboardPage() {
         return;
       }
 
-      const res = await fetch(`${BASE_URL}/api/health/records`, {
+      const res = await fetch(`${API_BASE_URL}/api/health/records`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -113,7 +112,8 @@ export default function DashboardPage() {
       });
 
       if (!res.ok) {
-        throw new Error(`Backend merespons dengan kode kesalahan status: ${res.status}`);
+        const errData = await res.json().catch(() => null);
+        throw new Error(getApiErrorMessage(errData));
       }
 
       const resJson = await res.json();
@@ -125,14 +125,23 @@ export default function DashboardPage() {
         history = resJson.records || resJson.data || [];
       }
 
+      const normalizeYesNo = (value: unknown): string => {
+        return value === 1 || value === '1' || value === true || value === 'Ya' || value === 'yes'
+          ? 'Ya'
+          : 'Tidak';
+      };
+
       const normalizedHistory: MedicalLog[] = history.map((log: any) => {
-        const finalBmi = log.bmi && log.bmi !== '-' ? String(parseFloat(log.bmi).toFixed(1)) : '-';
-        
+        const rawBmi = log.bmi ?? log.BMI;
+        const numericBmi = Number(rawBmi);
+        const finalBmi = Number.isFinite(numericBmi) && numericBmi > 0
+          ? numericBmi.toFixed(1)
+          : '-';
+
         let riskText = log.risk_level || log.prediction || 'Low';
         if (riskText === '1' || riskText === 1 || riskText === 'Diabetes Terdeteksi') riskText = 'High';
         if (riskText === '0' || riskText === 0 || riskText === 'Aman / Normal') riskText = 'Low';
 
-        // Menormalisasi properti diabetesRisk secara fleksibel
         const rawRisk = log.diabetesRisk ?? log.probability ?? log.risk_score ?? 0;
 
         return {
@@ -142,8 +151,8 @@ export default function DashboardPage() {
           weight: log.weight || '-',
           height: log.height || '-',
           bmi: finalBmi,
-          highBP: log.highBP || 'No',
-          highChol: log.highChol || 'No',
+          highBP: normalizeYesNo(log.highBP ?? log.HighBP),
+          highChol: normalizeYesNo(log.highChol ?? log.HighChol),
           prediction: riskText,
           status: log.status || 'Safe',
           ai_recommendation: log.ai_recommendation || 'Tidak ada rekomendasi dari AI.',

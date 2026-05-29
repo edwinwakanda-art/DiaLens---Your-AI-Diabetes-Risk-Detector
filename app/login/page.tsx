@@ -4,6 +4,8 @@ import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, Lock, Mail, ArrowLeft, LogIn, Check } from 'lucide-react';
 import Image from 'next/image';
+import { API_BASE_URL } from '../lib/api-url';
+import { getApiErrorMessage } from '../lib/get-api-error-message';
 
 function Logo({ className }: { className?: string }) {
   return (
@@ -39,7 +41,7 @@ export default function LoginPage() {
 
     try {
       // Integrasi langsung dengan URL API backend Vercel kamu
-      const response = await fetch('https://dialens-backend-production.up.railway.app/api/health/login', {
+      const response = await fetch(`${API_BASE_URL}/api/health/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -47,10 +49,10 @@ export default function LoginPage() {
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => null);
 
       if (!response.ok) {
-        throw new Error(data.message || 'Gagal masuk. Silakan periksa kredensial Anda.');
+        throw new Error(getApiErrorMessage(data));
       }
 
       // LOGIN BERHASIL: Simpan token autentikasi ke localStorage

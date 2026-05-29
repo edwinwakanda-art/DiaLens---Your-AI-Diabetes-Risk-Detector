@@ -18,10 +18,10 @@ import {
   ShieldAlert
 } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
+import { API_BASE_URL } from '../lib/api-url';
+import { getApiErrorMessage } from '../lib/get-api-error-message';
 import html2canvas from 'html2canvas-pro';
 import { jsPDF } from 'jspdf';
-
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'https://dialens-backend-production.up.railway.app';
 
 interface HistoryItem {
   id: string;
@@ -82,7 +82,7 @@ export default function HistoryPage() {
         return;
       }
 
-      const response = await fetch(`${BACKEND_URL}/api/health/records`, {
+      const response = await fetch(`${API_BASE_URL}/api/health/records`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -91,7 +91,8 @@ export default function HistoryPage() {
       });
 
       if (!response.ok) {
-        throw new Error(`Gagal memuat data riwayat (Status: ${response.status})`);
+        const errData = await response.json().catch(() => null);
+        throw new Error(getApiErrorMessage(errData));
       }
 
       const resJson = await response.json();
@@ -102,6 +103,12 @@ export default function HistoryPage() {
       } else if (resJson && typeof resJson === 'object') {
         rawLogs = resJson.records || resJson.data || [];
       }
+
+      const normalizeYesNo = (value: unknown): string => {
+        return value === 1 || value === '1' || value === true || value === 'Ya' || value === 'yes'
+          ? 'Ya'
+          : 'Tidak';
+      };
 
       const normalizedLogs: HistoryItem[] = rawLogs.map((log: any) => {
         let rawRisk = log.diabetesRisk ?? log.probability ?? log.risk_score ?? log.diabetes_risk ?? 0;
@@ -133,15 +140,21 @@ export default function HistoryPage() {
         const cleanWeight = String(log.weight ?? '-');
         const cleanHeight = String(log.height ?? '-');
 
+        const rawBmi = log.bmi ?? log.BMI;
+        const numericBmi = Number(rawBmi);
+        const finalBmi = Number.isFinite(numericBmi) && numericBmi > 0
+          ? numericBmi.toFixed(1)
+          : '-';
+
         return {
           id: log.id || log._id || 'DL-Log',
           date: log.date || log.createdAt || new Date().toISOString(),
           age: String(log.age ?? '1'),
           weight: cleanWeight,
           height: cleanHeight,
-          bmi: String(log.bmi || '-'),
-          highBP: log.highBP === 'Ya' || log.highBP === 'yes' ? 'Ya' : 'Tidak',
-          highChol: log.highChol === 'Ya' || log.highChol === 'yes' ? 'Ya' : 'Tidak',
+          bmi: finalBmi,
+          highBP: normalizeYesNo(log.highBP ?? log.HighBP),
+          highChol: normalizeYesNo(log.highChol ?? log.HighChol),
           prediction: customPredictionText,
           status: calculatedStatus,
           diabetesRisk: finalRiskPercent
@@ -168,7 +181,7 @@ export default function HistoryPage() {
     try {
       setDeletingId(id);
       const token = localStorage.getItem('token');
-      const response = await fetch(`${BACKEND_URL}/api/health/records/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/health/records/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -392,9 +405,6 @@ export default function HistoryPage() {
         let parsedBMI = parseFloat(selectedItem.bmi);
         if (isNaN(parsedBMI) || parsedBMI <= 0) parsedBMI = 0;
 
-        const displayHeight = selectedItem.height ? selectedItem.height.trim() : '-';
-        const displayWeight = selectedItem.weight ? selectedItem.weight.trim() : '-';
-
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
             <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
@@ -447,18 +457,18 @@ export default function HistoryPage() {
                         <span>Rentang Usia</span>
                         <span className="text-slate-900 font-bold">{getAgeRangeText(selectedItem.age)}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span>Berat Badan</span>
-                        <span className="text-slate-900 font-bold">
-                          {displayWeight !== '-' ? `${displayWeight} KG` : '- KG'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Tinggi Badan</span>
-                        <span className="text-slate-900 font-bold">
-                          {displayHeight !== '-' ? `${displayHeight} CM` : '- CM'}
-                        </span>
-                      </div>
+                      {selectedItem.weight && selectedItem.weight !== '-' && (
+                        <div className="flex justify-between">
+                          <span>Berat Badan</span>
+                          <span className="text-slate-900 font-bold">{selectedItem.weight} KG</span>
+                        </div>
+                      )}
+                      {selectedItem.height && selectedItem.height !== '-' && (
+                        <div className="flex justify-between">
+                          <span>Tinggi Badan</span>
+                          <span className="text-slate-900 font-bold">{selectedItem.height} CM</span>
+                        </div>
+                      )}
                       <div className="flex justify-between border-t border-blue-100 pt-2 mt-1">
                         <span className="text-blue-600 font-bold">Massa Tubuh (BMI)</span>
                         <span className="text-blue-600 font-black bg-blue-100/70 px-2 rounded">
