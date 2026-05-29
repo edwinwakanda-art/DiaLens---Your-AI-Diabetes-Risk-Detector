@@ -1,36 +1,154 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# DiaLens Frontend
+
+Frontend untuk aplikasi DiaLens — sistem prediksi risiko diabetes berbasis AI. Dibangun dengan Next.js App Router, Tailwind CSS, dan TypeScript.
+
+## Fitur
+
+- **Check Kesehatan** — Form input biometrik (tinggi, berat, tekanan darah, kolesterol, dll) dengan kalkulasi BMI otomatis dan hasil prediksi risiko dari AI.
+- **Dashboard** — Ringkasan total skrining, BMI terakhir, status risiko AI, grafik tren BMI & risiko, serta rekomendasi klinis dari AI.
+- **Riwayat (History)** — Tabel log semua pemeriksaan dengan detail modal, ekspor PDF, dan fitur hapus.
+- **Autentikasi** — Login & register dengan JWT token.
+- **Responsive** — Sidebar desktop + drawer mobile.
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| Framework | Next.js 16 (App Router) |
+| Language | TypeScript |
+| Styling | Tailwind CSS 4 |
+| Charts | Recharts |
+| Icons | Lucide React |
+| PDF Export | html2canvas-pro + jsPDF |
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 18+
+- npm
+
+### Install
+
+```bash
+npm install
+```
+
+### Environment Variables
+
+Buat file `.env.local` di root project:
+
+```env
+NEXT_PUBLIC_API_URL=https://dialens-backend-production.up.railway.app
+```
+
+Ganti URL di atas ke backend lokal/staging jika diperlukan:
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:5000
+```
+
+### Development
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Buka [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Build
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+npm start
+```
 
-## Learn More
+### Lint
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run lint
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Project Structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+app/
+├── page.tsx              # Landing page
+├── layout.tsx            # Root layout
+├── globals.css           # Global styles
+├── login/page.tsx        # Halaman login
+├── register/page.tsx     # Halaman register
+├── check/page.tsx        # Form skrining kesehatan + hasil prediksi AI
+├── dashboard/page.tsx    # Dashboard ringkasan + grafik tren
+├── history/page.tsx      # Riwayat pemeriksaan + detail modal + PDF export
+├── information/page.tsx  # Halaman informasi
+├── about/page.tsx        # Halaman tentang
+├── components/
+│   └── Sidebar.tsx       # Komponen sidebar navigasi
+└── lib/
+    ├── api-url.ts                # Shared base URL backend
+    └── get-api-error-message.ts  # Helper parsing error response
+```
 
-## Deploy on Vercel
+## API Contract
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Predict (`POST /api/health/predict`)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Request body (9 field AI + metadata):
+
+```json
+{
+  "HighBP": 0,
+  "GenHlth": 1,
+  "HighChol": 0,
+  "Age": 1,
+  "CholCheck": 0,
+  "HvyAlcoholConsump": 0,
+  "BMI": 23.5,
+  "PhysActivity": 0,
+  "Smoker": 0,
+  "Weight": 68,
+  "Height": 170
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "data": {
+    "prediction": 0,
+    "risk_level": "medium",
+    "probability": 0.55,
+    "ai_recommendation": "..."
+  }
+}
+```
+
+### Records (`GET /api/health/records`)
+
+Response (lowercase/camelCase, numeric sebagai string):
+
+```json
+[
+  {
+    "id": "...",
+    "date": "...",
+    "age": "1",
+    "weight": "68",
+    "height": "170",
+    "bmi": "23.5",
+    "highBP": "1",
+    "highChol": "0",
+    "risk_level": "medium",
+    "diabetesRisk": 0.55,
+    "ai_recommendation": "...",
+    "topRiskFactors": []
+  }
+]
+```
+
+## License
+
+Private — hanya untuk penggunaan klinis dan penelitian.

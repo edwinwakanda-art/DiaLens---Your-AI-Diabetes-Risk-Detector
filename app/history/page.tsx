@@ -20,6 +20,8 @@ import {
 import Sidebar from '../components/Sidebar';
 import { API_BASE_URL } from '../lib/api-url';
 import { getApiErrorMessage } from '../lib/get-api-error-message';
+import html2canvas from 'html2canvas-pro';
+import { jsPDF } from 'jspdf';
 
 interface HistoryItem {
   id: string;
