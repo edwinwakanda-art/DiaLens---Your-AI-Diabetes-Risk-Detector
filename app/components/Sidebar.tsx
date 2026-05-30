@@ -44,86 +44,117 @@ export default function Sidebar() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('userName');
-    localStorage.removeItem('user');
-    router.push('/login');
+    localStorage.removeItem('user_token');
+    router.push('/');
   };
 
   return (
     <>
-      {/* MOBILE TOPBAR */}
-      <div className="md:hidden fixed top-4 left-4 right-4 z-40 flex items-center justify-between p-3 bg-white rounded-xl shadow-md">
-        <div className="flex items-center gap-3">
-          <Image src="/Logo%20Dialens%20AI.png" alt="DiaLens" height={32} width={32} className="h-8 w-auto rounded-md" />
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => setMobileSidebarOpen(true)} className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200">
-            <Menu size={18} />
-          </button>
-        </div>
-      </div>
-
-      {/* SIDEBAR NAVIGATION (DESKTOP) */}
-      <aside className="hidden md:fixed md:inset-y-0 md:left-0 md:w-64 md:flex md:flex-col bg-white border-r border-slate-100 p-6 md:justify-between z-30">
-        <div className="space-y-8">
-          {/* LOGO */}
+      {/* DESKTOP SIDEBAR */}
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 border-r border-slate-100 bg-white p-6 lg:block">
+        
+        {/* AREA LOGO DENGAN TEXT WELCOME DAN GARIS PEMISAH BAWAH */}
+        <div className="flex flex-col pb-5 border-b border-slate-100">
           <div className="flex items-center gap-3 px-2">
-            <div className="bg-blue-600 p-2 rounded-xl text-white shadow-md shadow-blue-100">
-              <Activity size={20} strokeWidth={3} />
-            </div>
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none">Welcome</p>
-              <h2 className="text-lg font-black text-slate-900 tracking-tight mt-1">DiaLens</h2>
+            <Image 
+              src="/favicon.ico" 
+              alt="DiaLens AI Logo" 
+              width={34} 
+              height={34} 
+              className="object-contain"
+              priority
+            />
+            <div className="flex flex-col leading-tight">
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">WELCOME TO</span>
+              <span className="text-xl font-black text-slate-900 tracking-tight">DIALENS AI</span>
             </div>
           </div>
-
-          {/* NAVIGASI UTAMA */}
-          <nav className="space-y-1.5 flex flex-col">
-            <SidebarItem href="/dashboard" icon={LayoutDashboard} label="Dashboard" active={pathname === '/dashboard'} />
-            <SidebarItem href="/check" icon={Activity} label="Check Kesehatan" active={pathname === '/check'} />
-            <SidebarItem href="/history" icon={ShieldCheck} label="History" active={pathname === '/history'} />
-            <SidebarItem href="/rumah-sakit" icon={Hospital} label="Rumah Sakit" active={pathname === '/rumah-sakit'} />
-            <SidebarItem href="/information" icon={Sparkles} label="Information" active={pathname === '/information'} />
-          </nav>
         </div>
 
-        <div className="pt-4 border-t border-slate-100">
-          <button onClick={handleLogout} className="w-full flex items-center gap-3 rounded-2xl px-4 py-3.5 text-rose-600 font-bold text-sm hover:bg-rose-50 transition-all text-left">
+        {/* DAFTAR MENU SIDEBAR */}
+        <nav className="mt-6 space-y-2 flex flex-col">
+          <SidebarItem href="/dashboard" icon={LayoutDashboard} label="Dashboard" active={pathname === '/dashboard'} />
+          <SidebarItem href="/check" icon={Activity} label="Check Kesehatan" active={pathname === '/check'} />
+          <SidebarItem href="/history" icon={ShieldCheck} label="Riwayat" active={pathname === '/history'} />
+          <SidebarItem href="/rumah-sakit" icon={Hospital} label="Rumah Sakit" active={pathname === '/rumah-sakit'} />
+          <SidebarItem href="/information" icon={Sparkles} label="Informasi" active={pathname === '/information'} />
+        </nav>
+
+        <div className="absolute bottom-6 left-6 right-6 pt-4 border-t border-slate-100">
+          <button 
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 rounded-2xl px-4 py-3.5 text-rose-600 font-bold text-sm hover:bg-rose-50 transition-all text-left cursor-pointer"
+          >
             <LogOut size={18} />
             <span>Logout</span>
           </button>
         </div>
       </aside>
 
-      {/* MOBILE SIDEBAR DRAWER */}
-      {mobileSidebarOpen && (
-        <div className="fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setMobileSidebarOpen(false)} />
-          <div className="absolute left-0 top-0 bottom-0 w-72 bg-white p-6">
-            <div className="flex items-center justify-between">
-              <div />
-              <button onClick={() => setMobileSidebarOpen(false)} className="p-2 rounded-lg">
-                <X size={18} />
-              </button>
-            </div>
-
-            <nav className="mt-6 space-y-2.5 flex flex-col">
-              <SidebarItem href="/dashboard" icon={LayoutDashboard} label="Dashboard" active={pathname === '/dashboard'} onClick={() => setMobileSidebarOpen(false)} />
-              <SidebarItem href="/check" icon={Activity} label="Check Kesehatan" active={pathname === '/check'} onClick={() => setMobileSidebarOpen(false)} />
-              <SidebarItem href="/history" icon={ShieldCheck} label="History" active={pathname === '/history'} onClick={() => setMobileSidebarOpen(false)} />
-              <SidebarItem href="/rumah-sakit" icon={Hospital} label="Rumah Sakit" active={pathname === '/rumah-sakit'} onClick={() => setMobileSidebarOpen(false)} />
-              <SidebarItem href="/information" icon={Sparkles} label="Information" active={pathname === '/information'} onClick={() => setMobileSidebarOpen(false)} />
-            </nav>
-
-            <div className="pt-6 border-t border-slate-100">
-              <button onClick={() => { setMobileSidebarOpen(false); handleLogout(); }} className="w-full flex items-center gap-3 rounded-2xl px-4 py-3.5 text-rose-600 font-bold text-sm hover:bg-rose-50 transition-all text-left">
-                <LogOut size={18} />
-                <span>Logout</span>
-              </button>
-            </div>
+      {/* MOBILE HEADER BAR */}
+      <div className="fixed top-0 left-0 right-0 z-30 flex items-center justify-between border-b border-slate-100 bg-white/80 backdrop-blur-md px-5 py-4 lg:hidden">
+        <div className="flex items-center gap-2.5">
+          <Image 
+            src="/favicon.ico" 
+            alt="DiaLens AI Logo" 
+            width={28} 
+            height={28} 
+            className="object-contain"
+            priority
+          />
+          <div className="flex flex-col leading-tight">
+            <span className="text-[7px] font-bold text-slate-400 uppercase tracking-widest">WELCOME TO</span>
+            <span className="text-sm font-black text-slate-900 tracking-tight">DIALENS AI</span>
           </div>
+        </div>
+        <button onClick={() => setMobileSidebarOpen(true)} className="p-2 rounded-lg text-slate-600 hover:bg-slate-50">
+          <Menu size={20} />
+        </button>
+      </div>
+
+      {/* MOBILE SIDEBAR DRAWNER */}
+      {mobileSidebarOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div onClick={() => setMobileSidebarOpen(false)} className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm" />
+          
+          <aside className="fixed inset-y-0 right-0 z-50 w-64 bg-white p-6 shadow-2xl flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div className="flex items-center gap-2.5">
+                  <Image 
+                    src="/favicon.ico" 
+                    alt="DiaLens AI Logo" 
+                    width={28} 
+                    height={28} 
+                    className="object-contain"
+                    priority
+                  />
+                  <div className="flex flex-col leading-tight">
+                    <span className="text-[7px] font-bold text-slate-400 uppercase tracking-widest">WELCOME TO</span>
+                    <span className="text-sm font-black text-slate-900 tracking-tight">DIALENS AI</span>
+                  </div>
+                </div>
+                <button onClick={() => setMobileSidebarOpen(false)} className="p-2 rounded-lg">
+                  <X size={18} />
+                </button>
+              </div>
+
+              <nav className="mt-6 space-y-2.5 flex flex-col">
+                <SidebarItem href="/dashboard" icon={LayoutDashboard} label="Dashboard" active={pathname === '/dashboard'} onClick={() => setMobileSidebarOpen(false)} />
+                <SidebarItem href="/check" icon={Activity} label="Check Kesehatan" active={pathname === '/check'} onClick={() => setMobileSidebarOpen(false)} />
+                <SidebarItem href="/history" icon={ShieldCheck} label="Riwayat" active={pathname === '/history'} onClick={() => setMobileSidebarOpen(false)} />
+                <SidebarItem href="/rumah-sakit" icon={Hospital} label="Rumah Sakit" active={pathname === '/rumah-sakit'} onClick={() => setMobileSidebarOpen(false)} />
+                <SidebarItem href="/information" icon={Sparkles} label="Informasi" active={pathname === '/information'} onClick={() => setMobileSidebarOpen(false)} />
+              </nav>
+
+              <div className="pt-6 border-t border-slate-100">
+                <button onClick={() => { setMobileSidebarOpen(false); handleLogout(); }} className="w-full flex items-center gap-3 rounded-2xl px-4 py-3.5 text-rose-600 font-bold text-sm hover:bg-rose-50 transition-all text-left">
+                  <LogOut size={18} />
+                  <span>Logout</span>
+                </button>
+              </div>
+            </div>
+          </aside>
         </div>
       )}
     </>

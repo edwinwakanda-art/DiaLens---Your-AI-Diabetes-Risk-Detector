@@ -10,10 +10,10 @@ import { getApiErrorMessage } from '../lib/get-api-error-message';
 function Logo({ className }: { className?: string }) {
   return (
     <Image
-      src="/Logo%20Dialens%20AI.png"
+      src="/icon1.png"
       alt="DiaLens AI"
-      width={160}
-      height={48}
+      width={150}
+      height={40}
       className={`h-12 w-auto rounded-2xl object-contain bg-white ${className ?? ''}`}
     />
   );

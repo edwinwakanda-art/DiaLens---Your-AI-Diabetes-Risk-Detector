@@ -146,7 +146,7 @@ export default function LandingPage({ onStartScreening }: LandingPageProps) {
       <header className="w-full fixed top-0 left-0 right-0 bg-white/70 backdrop-blur-md border-b border-slate-200/40 z-50">
         <div className="max-w-7xl mx-auto px-8 py-4 flex items-center justify-between">
           <div className="hidden md:flex items-center gap-2.5 group cursor-pointer">
-            <Image src="/Logo%20Dialens%20AI.png" alt="DiaLens AI" height={32} width={32} className="h-8 w-auto rounded-md shadow-md" />
+            <Image src="/icon2.png" alt="DiaLens AI" height={32} width={32} className="h-8 w-auto rounded-md shadow-md" />
             <span className="font-black text-sm text-slate-900 tracking-tight">DIA LENS AI</span>
           </div>
 
