@@ -56,7 +56,7 @@ const teamMembers = [
 
 export default function LandingPage({ onStartScreening }: LandingPageProps) {
   // --- ANIMASI MENGETIK (TYPEWRITER) ---
-  const words = useMemo(() => ["Diabetes Risk", "Your Health", "Clinical Data"], []);
+  const words = useMemo(() => ["Resiko Diabetes", "Kondisi Kesehatan", "Data klinik"], []);
   const [typedText, setTypedText] = useState("");
   const [wordIdx, setWordIdx] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -162,22 +162,22 @@ export default function LandingPage({ onStartScreening }: LandingPageProps) {
 
           <nav className="hidden md:flex items-center gap-8 font-bold text-xs text-slate-500 uppercase tracking-wider">
             <a href="#home" onClick={(e) => handleSmoothScroll(e, 'home')} className="hover:text-blue-600 py-1.5 relative group">
-              Home
+              Beranda
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full"></span>
             </a>
             <a href="#screening" onClick={(e) => handleSmoothScroll(e, 'screening')} className="hover:text-blue-600 py-1.5 relative group">
-              Demo
+              Uji Coba
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full"></span>
             </a>
             <a href="#about" onClick={(e) => handleSmoothScroll(e, 'about')} className="hover:text-blue-600 py-1.5 relative group">
-              About
+              Tentang
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full"></span>
             </a>
           </nav>
 
           <div>
             <Link href="/login" className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black px-6 py-2.5 rounded-xl text-xs uppercase tracking-wider shadow-md shadow-blue-100 flex items-center gap-1.5 hover:scale-[1.03] transition-all">
-              <span>Login Account</span>
+              <span>Login Akun</span>
               <ChevronRight size={13} strokeWidth={3} />
             </Link>
           </div>
@@ -214,12 +214,12 @@ export default function LandingPage({ onStartScreening }: LandingPageProps) {
           
           <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-600 border border-blue-200/60 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm">
             <Sparkles className="w-3.5 h-3.5" />
-            Clinical Grade AI Detector
+            Detektor AI tingkat klinis
           </div>
 
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-slate-900 tracking-tight leading-[1.1] max-w-4xl">
-            The Clinical Curator <br />
-            for <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 border-r-4 border-indigo-600 pr-2">{typedText}</span>
+          kurator klinis <br />
+            untuk <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 border-r-4 border-indigo-600 pr-2">{typedText}</span>
           </h1>
 
           <p className="text-slate-500 text-base md:text-lg font-medium leading-relaxed max-w-2xl">
@@ -304,7 +304,7 @@ export default function LandingPage({ onStartScreening }: LandingPageProps) {
               <div className="mb-8 flex flex-col gap-4 rounded-[2rem] bg-slate-50 p-5 border border-slate-200">
                 <div className="flex items-center justify-between gap-4">
                   <div className="inline-flex items-center gap-3 rounded-3xl bg-blue-600/10 px-4 py-3 text-blue-700 font-black text-sm">
-                    <BrainCircuit size={18} /> AI Risk Preview
+                    <BrainCircuit size={18} /> Pratinjau risiko AI
                   </div>
                   <div className="text-right">
                     <p className="text-[10px] uppercase tracking-[0.3em] text-slate-400 font-black">Output Instan</p>
@@ -538,8 +538,8 @@ export default function LandingPage({ onStartScreening }: LandingPageProps) {
           {/* Team Section at Bottom */}
           <section className="pt-8">
             <div className="text-center space-y-3 max-w-2xl mx-auto mb-12">
-              <p className="text-[10px] font-black uppercase tracking-[0.25em] text-indigo-600">The Innovators</p>
-              <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">Meet Our Special Team</h2>
+              <p className="text-[10px] font-black uppercase tracking-[0.25em] text-indigo-600">Tim Inovator</p>
+              <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">Kenali Tim Spesial Kami</h2>
               <p className="text-slate-500 text-sm md:text-base leading-relaxed">
                 Tim lintas keahlian kami memadukan machine learning, pengolahan data klinis, dan pengalaman aplikasi untuk membangun DiaLens.
               </p>
@@ -587,11 +587,11 @@ export default function LandingPage({ onStartScreening }: LandingPageProps) {
       <footer className="bg-slate-800 text-slate-100 py-16 px-6 border-t border-slate-890 relative z-10">
 
         <div className="max-w-7xl mx-auto border-t border-slate-800 mt-0 pt-2 flex flex-col md:flex-row items-center justify-between text-xs font-medium">
-          <span>&copy; {new Date().getFullYear()} DiaLens AI Clinical Curator. All rights reserved.</span>
+          <span>&copy; {new Date().getFullYear()} Kurator Klinis AI DiaLens. Semua hak dilindungi undang-undang.</span>
           <div className="flex space-x-6 mt-4 md:mt-0">
-            <a href="#" className="hover:text-white transition-colors">HOME</a>
-            <a href="#" className="hover:text-white transition-colors">DEMO</a>
-            <a href="#" className="hover:text-white transition-colors">ABOUT</a>
+            <a href="#" className="hover:text-white transition-colors">Beranda</a>
+            <a href="#" className="hover:text-white transition-colors">Uji Coba</a>
+            <a href="#" className="hover:text-white transition-colors">Tentang</a>
           </div>
         </div>
       </footer>
